@@ -1,0 +1,76 @@
+module MakeFenwick
+  # ref:https://github.com/universato/ac-library-rb/blob/main/lib/fenwick_tree.rb
+  # fenwick木は1-indexedなので先頭は使わない。fenwick木の長さでも入れておくこと。
+  # https://algo-logic.info/binary-indexed-tree/
+  # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
+  def make_fenwick(raw_array)
+    fenwick = [raw_array.size]
+    fenwick.concat(raw_array)
+    fenwick.each_with_index do |value, tmp_index|
+      next if index == 0
+
+      # LSB(Least Significant Bit)
+      sum_index = tmp_index + (tmp_index & -tmp_index)
+      next if sum_index > fenwick[0]
+
+      fenwick[sum_index] += value
+    end
+    fenwick
+  end
+end
+
+module MyFenwickTree
+  # ref:https://github.com/universato/ac-library-rb/blob/main/lib/fenwick_tree.rb
+  # fenwick木は1-indexedなので先頭は使わない。fenwick木の長さでも入れておくこと。
+  # https://algo-logic.info/binary-indexed-tree/
+  # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
+
+  def add(index, value)
+    tmp_index += 1
+    while tmp_index <= self_fenwick_size
+      self[tmp_index] ||= 0
+      self[tmp_index] += value
+      # LSB(Least Significant Bit)
+      tmp_index += (tmp_index & -tmp_index)
+    end
+  end
+
+  # .sum_between(l, r)  # [l, r)
+  def sum_between(left, right)
+    left_sum(right) - left_sum(left)
+  end
+
+  def left_sum(i)
+    res = 0
+    while i > 0
+      res += self[i]
+      # LSB(Least Significant Bit)を払っている
+      i &= i - 1
+    end
+    res
+  end
+
+  def self_fenwick_size
+    self[0]
+  end
+end
+
+# 転倒数
+# https://atcoder.jp/contests/arc136/submissions/29760979
+module MyInversionNumber
+  # https://scrapbox.io/pocala-kyopro/%E8%BB%A2%E5%80%92%E6%95%B0
+  # https://kira000.hatenadiary.jp/entry/2019/02/23/053917
+  include MyFenwickTree
+  def my_inversion_number
+    fenwick = [self.max]
+    fenwick.extend MyFenwickTree
+    answer = 0
+    self.each_with_index do |value, index|
+      # 現状の全数-現状の左合計=現状の右合計
+      tmp_right_sum = index - fenwick.left_sum(value)
+      answer += tmp_right_sum
+      fenwick.add(value, 1)
+    end
+    answer
+  end
+end

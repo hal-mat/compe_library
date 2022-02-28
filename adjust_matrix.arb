@@ -1,0 +1,13 @@
+module AdjustMatrix
+  def adjust_matrix(nodes_count)
+    buffer_answer = Array.new(nodes_count) { [] }
+    self.each do |node_a, node_b|
+      node_a -= 1
+      node_b -= 1
+      buffer_answer[node_a][node_b] = true
+      buffer_answer[node_b][node_a] = true
+    end
+    buffer_answer
+  end
+end
+
