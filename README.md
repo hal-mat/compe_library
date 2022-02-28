@@ -1,0 +1,2 @@
+# compe_library
+ruby
