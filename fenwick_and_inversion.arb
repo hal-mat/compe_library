@@ -26,9 +26,9 @@ module MyFenwickTree
   # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
 
   def add(index, value)
-    tmp_index += 1
+    tmp_index = index
     while tmp_index <= self_fenwick_size
-      self[tmp_index] ||= 0
+      # self[tmp_index] ||= 0
       self[tmp_index] += value
       # LSB(Least Significant Bit)
       tmp_index += (tmp_index & -tmp_index)
@@ -52,6 +52,25 @@ module MyFenwickTree
 
   def self_fenwick_size
     self[0]
+  end
+
+  # left_sum(a) >= under_borderとなるような最小のa
+  # https://algo-logic.info/binary-indexed-tree/#toc_id_1_2
+  def lower_bound(under_border)
+    return -1 if under_border <= 0
+
+    buffer_under_border = under_border
+    buffer_answer = 0
+    tmp_right = 1
+    tmp_right <<= 1 while tmp_right <= self_fenwick_size
+    while (tmp_right >>= 1) > 0
+      # まだ足せる場合
+      if buffer_answer + tmp_right <= self_fenwick_size && self[buffer_answer + tmp_right] < buffer_under_border
+        buffer_under_border -= self[buffer_answer + tmp_right]
+        buffer_answer += tmp_right
+      end
+    end
+    buffer_answer + 1
   end
 end
 
