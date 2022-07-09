@@ -1,0 +1,106 @@
+# 遅延セグ木ではなく通常セグ木。いつか遅延セグ木も書く
+# ref:https://zenn.dev/magurofly/articles/3aa1084dfecce2
+# ref:https://github.com/universato/ac-library-rb/blob/main/lib/segtree.rb
+# https://tsutaj.hatenablog.com/entry/2017/03/29/204841
+module SegmentTree
+  # segment木はその性質上、元の配列は全て葉であり、それ以外に枝(と根)が必須
+  # この枝(と根)の数をいちいち算出していてはTLEするので、配列の先頭に葉が始まるindexの値を入れておく。
+  # なんでmodule内でインスタンス変数を使わんのだ？
+  # https://mirichi.hatenadiary.org/entry/20140206/p1
+  # 根は[1]からスタート
+  def init_segment_tree!
+    # selfは全て葉。この上に枝(と根)の情報を持っておくのがセグ木
+    self_size = self.size
+    leaf_bit_size = self_size.bit_length
+    # これが枝(と根)のノード数
+    # branch_size = 1 << leaf_bit_size - 1
+    leaf_begin_index = 1 << leaf_bit_size
+    segment_tree = Array.new(leaf_begin_index)
+    segment_tree[0] = leaf_begin_index
+    self.replace(segment_tree.concat(self))
+    # これで根と枝を持たせたのでOK。次にupdate
+    update_all!
+  end
+
+  def set(leaf_index, value)
+    real_index = self[0] + leaf_index
+    self[real_index] = value
+    child_index = real_index
+    until child_index == 1
+      parent_index = child_index / 2
+      update!(parent_index)
+      child_index = parent_index
+    end
+  end
+
+  def get(leaf_index)
+    real_index = self[0] + leaf_index
+    self[real_index]
+  end
+
+  # op(a[l], ..., a[r - 1]) を返します。引数は半開区間です
+  def prod(l, r)
+    return 0 if l == r
+
+    sml = 0
+    smr = 0
+    l += self[0]
+    r += self[0]
+
+    while l < r
+      # 引数が偶数の場合は計算しなくても上行けば合計が記録済み
+      # 引数が奇数の場合は上に行くと不味いので、ここまでの合計を記録してから一つ内側に移動
+      if l[0] == 1
+        sml += self[l]
+        l += 1
+      end
+      if r[0] == 1
+        smr += self[r - 1]
+        r -= 1
+      end
+      l /= 2
+      r /= 2
+      p [sml, smr]
+      p [l, r]
+    end
+
+    sml + smr
+  end
+
+  # 二分探索のmax_rightとmin_leftもいつか書く
+
+  private
+
+    # 全ての枝と根を更新
+    def update_all!
+      # 後ろから順に全てを足していく
+      last_index = self.size - 1
+      # ここのdupを消せば高速化出来る。ただしsegmentが破壊されるので注意
+      last_index.step(2, -2) do |right_child_index|
+        parent_index = right_child_index >> 1 # 1余るのは無視
+        update!(parent_index)
+      end
+    end
+
+    def update!(parent_index)
+      # 左の子がない場合はそもそも両方とも子がないので親もnilでOK。右の子だけがnilはありえるので対策を入れる
+      return unless self[2 * parent_index]
+
+      self[parent_index] = self[2 * parent_index] + (self[2 * parent_index + 1] || 0)
+    end
+end
+
+ex_array = (0..9).to_a
+ex_array.extend SegmentTree
+ex_array.init_segment_tree!
+p "ex_array"
+p ex_array
+ex_array.set(1, 10)
+p "set"
+p ex_array
+p "ex_array.prod(0, 7)"
+p ex_array.prod(0, 7)
+p "ex_array.prod(1, 7)"
+p ex_array.prod(1, 7)
+p "ex_array.prod(1, 8)"
+p ex_array.prod(1, 8)

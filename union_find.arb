@@ -1,35 +1,48 @@
 module UnionFind
+  # node数分の-1で埋めた配列にextendする事
   def has_all_united
     union_count == 1
   end
 
   def union_count
-    self.count {|v| v && v.negative? }
+    self.count {|v| root?(v) }
   end
 
-  def unite(root_tree_node, branch_tree_node)
-    root_tree_root = root_of(root_tree_node)
-    branch_tree_root = root_of(branch_tree_node)
+  def unite!(root_tree_node, branch_tree_node)
+    root_tree_root = root_of!(root_tree_node)
+    branch_tree_root = root_of!(branch_tree_node)
     return if root_tree_root == branch_tree_root
 
-    # 前後がない場合はソートして小さい木を葉にした方が早い。todo:いつかsize関数作って比較して交換する関数作る
+    # 大きい方が根
+    root_tree_root, branch_tree_root = branch_tree_root, root_tree_root if tree_size(root_tree_root) < tree_size(branch_tree_root)
+
     self[root_tree_root] += self[branch_tree_root]
     self[branch_tree_root] = root_tree_root
   end
 
   def same_union?(node_a, node_b)
-    root_of(node_a) == root_of(node_b)
+    root_of!(node_a) == root_of!(node_b)
   end
 
-  def root_of(now_node)
-    return now_node if root?(now_node)
+  def root_of!(now_node)
+    # ガード節よりif elseの方がやや早い
+    if root?(now_node)
+      now_node
+    else
+      self[now_node] = root_of!(self[now_node])
+    end
+  end
 
-    self[now_node] = root_of(self[now_node])
+  def tree_size(node)
+    self[root_of!(node)] * -1
   end
 
   private
 
     def root?(now_node)
-      self[now_node].negative?
+      # 正負判定は、i > 0・i < 0が速い。i.positive?・i.negative?より、1.4倍速い。
+      self[now_node] < 0
+      # 昔は空配列もOKだったが、重いので-1埋めのみにした
+      # (self[now_node] ||= -1).negative?
     end
 end

@@ -28,7 +28,7 @@ module MyFenwickTree
   def add(index, value)
     tmp_index = index
     while tmp_index <= self_fenwick_size
-      # self[tmp_index] ||= 0
+      self[tmp_index] ||= 0
       self[tmp_index] += value
       # LSB(Least Significant Bit)
       tmp_index += (tmp_index & -tmp_index)
@@ -43,7 +43,7 @@ module MyFenwickTree
   def left_sum(i)
     res = 0
     while i > 0
-      res += self[i]
+      res += self[i] || 0
       # LSB(Least Significant Bit)を払っている
       i &= i - 1
     end
@@ -76,6 +76,7 @@ end
 
 # 転倒数
 # https://atcoder.jp/contests/arc136/submissions/29760979
+# 生配列に直接includeして使う。makefenwickは使わないので注意
 module MyInversionNumber
   # https://scrapbox.io/pocala-kyopro/%E8%BB%A2%E5%80%92%E6%95%B0
   # https://kira000.hatenadiary.jp/entry/2019/02/23/053917
