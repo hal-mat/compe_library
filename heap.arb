@@ -1,10 +1,23 @@
 module MyHeap
   # 空配列にいちいちheap_pushすると重いので、heap_pushが必要になってからsortして使う
-  def heap_push!(arg)
-    self << arg
-    if (self_size = self.size) >= 2
-      heap_up!(self_size - 1)
+  def heap_push!(arg_value)
+    self << arg_value
+    # 昔はここからのせり上がりを再帰関数で書いていたが、rubyはwhileで書かないと間に合わない
+    # 1-indexedなら2で割るだけで親インデックスが出るのだが、shiftがややこしくなりそうなのであえて0-indexed
+    child_index = self.size - 1
+    parent_index = parent_index_of(child_index)
+    parent_value = self[parent_index]
+    # https://atcoder.jp/contests/abc252/submissions/31865081
+    # マジで一回ずつswapするのではなく、既存のピラミッドを一段ずつ引き下げて出来た隙間に引数の要素をねじ込む
+    until correct_order?(parent_value, arg_value) || child_index == 0
+      # 親の値を子の位置に引き下げ、もう一段上で再比較
+      self[child_index] = parent_value
+      child_index = parent_index
+      parent_index = parent_index_of(child_index)
+      parent_value = self[parent_index]
     end
+    # それ以上上がれない場合は末尾の値を現在のchildの位置にねじ込んで終了
+    self[child_index] = arg_value
   end
 
   def heap_shift!
@@ -13,58 +26,60 @@ module MyHeap
     else
       shift_value = self[0]
       self[0] = self.pop
-      heap_down! 0
+      heap_down!
       shift_value
     end
   end
 
   def heap_swap!(arg)
     self[0] = arg
-    heap_down! 0
+    heap_down!
   end
 
   private
 
+    def parent_index_of(child_index)
+      (child_index - 1) >> 1
+    end
+
     # AtCoder Libraryのup,downと逆なので注意。下から持ち上げるのがup,頂上から下ろすのがdown
-    def heap_up!(child_index)
-      # 1-indexedなら2で割るだけで親インデックスが出るのだが、shiftがややこしくなりそうなのであえて0-indexedで行く
-      parent_index = (child_index - 1) / 2
-      # 値を交換した場合は今の親を子としてピラミッドを登っていく
-      heap_up!(parent_index) unless swap_satisfied?(parent_index, child_index)
-    end
-
-    def heap_down!(parent_index)
+    def heap_down!
+      # 昔は再帰関数で書いていたが、rubyはwhileで書かないと間に合わない
       # 1-indexedなら2倍すれば左の子インデックスになるが、shiftがややこしいので0-indexed
-      left_child_index = parent_index * 2 + 1
+      # マジで一回ずつswapするのではなく、既存のピラミッドを一段ずつ引き下げて出来た隙間に引数の要素をねじ込む
+      first_value = self[0]
+
+      tmp_parent_index = 0
+
+      # must_parent_indexが親のindexのまま→正位置。終了
+      # must_parent_indexに子のindexが再代入→転倒。子の値を親の位置に引き上げ、もう一段下で再比較
+      until (must_parent_index = must_parent_index_of(first_value, tmp_parent_index)) == tmp_parent_index
+        # 子の値を親の位置に引き上げ、もう一段下で再比較
+        self[tmp_parent_index] = self[must_parent_index]
+        tmp_parent_index = must_parent_index
+      end
+      # 終了したら頂上の値を今の親のindexに代入
+      self[tmp_parent_index] = first_value
+    end
+
+    def left_child_index_of(parent_index)
+      (parent_index << 1) + 1
+    end
+
+    def must_parent_index_of(parent_value, parent_index)
+      # indexから実際の値を取ってこないこと。実際に値を交換せずに擬似的に親valueを下ろしてきているだけなのでズレる
+      left_child_index = left_child_index_of(parent_index)
       right_child_index = left_child_index + 1
-
-      must_parent_index = parent_index
-      must_parent_index = left_child_index unless correct_order?(must_parent_index, left_child_index)
-      must_parent_index = right_child_index unless correct_order?(must_parent_index, right_child_index)
-      return if must_parent_index == parent_index
-
-      self[must_parent_index], self[parent_index] = self[parent_index], self[must_parent_index]
-      heap_down!(must_parent_index)
+      # 子の値はズレていないので直接取って良し。左と右どちらが親に近いか決める
+      stronger_child_index = correct_order?(self[left_child_index], self[right_child_index]) ? left_child_index : right_child_index
+      # 勝ち残った方の子を親と比べる
+      correct_order?(parent_value, self[stronger_child_index]) ? parent_index : stronger_child_index
     end
 
-    # こんなメソッド名だがbool判定だけではなく交換もメソッド内でやっちゃうので注意
-    def swap_satisfied?(parent_index, child_index)
-      # 子ノードが頂点
-      # 最底辺でもうそれ以下の子ノードがない
-      # 存在したとしても親子の順序が正しい
-      # 以上３つのうちどれかを満たしているなら交換終了。それ以上は交換しない
-      return true if correct_order?(parent_index, child_index)
+    def correct_order?(parent_value, child_value)
+      # どちらかnilの場合はそこで終了確定
+      return true unless parent_value && child_value
 
-      # 以上の条件を一つも満たさなかった場合、値を交換して継続
-      self[parent_index], self[child_index] = self[child_index], self[parent_index]
-      false
-    end
-
-    def correct_order?(parent_index, child_index)
-      parent_value = self[parent_index]
-      child_value = self[child_index]
-      return true if child_value.nil? || child_index == 0 # 子ノードが存在しないかすでに頂点ならOK
-
-      parent_value < child_value # コピペする時はここを変える
+      parent_value[DISTANCE] < child_value[DISTANCE] # コピペする時はここを変える
     end
 end
