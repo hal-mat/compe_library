@@ -1,3 +1,6 @@
+# 変更した際は以下の問題で転倒数がバグってないか確認！
+# https://atcoder.jp/contests/abc264/tasks/abc264_d
+
 module MakeFenwick
   # ref:https://github.com/universato/ac-library-rb/blob/main/lib/fenwick_tree.rb
   # fenwick木は1-indexedなので先頭は使わない。fenwick木の長さでも入れておくこと。
@@ -82,15 +85,29 @@ module MyInversionNumber
   # https://kira000.hatenadiary.jp/entry/2019/02/23/053917
   include MyFenwickTree
   def my_inversion_number
+    raise StandardError, "not uniq" unless self.uniq == self
+
+    # 0以下の数字があるとバグるので正の数の座標圧縮
+    self.extend CoordinateCompression
+    self_uniq_hash = self.coordinate_compression
+
     fenwick = [self.max]
     fenwick.extend MyFenwickTree
     answer = 0
     self.each_with_index do |value, index|
+      compressed_value = self_uniq_hash[value]
       # 現状の全数-現状の左合計=現状の右合計
-      tmp_right_sum = index - fenwick.left_sum(value)
+      tmp_right_sum = index - fenwick.left_sum(compressed_value)
       answer += tmp_right_sum
-      fenwick.add(value, 1)
+      fenwick.add(compressed_value, 1)
     end
     answer
+  end
+
+  module CoordinateCompression
+    def coordinate_compression
+      self_uniq = self.uniq
+      [self_uniq.sort, (1..self_uniq.size).to_a].transpose.to_h
+    end
   end
 end
