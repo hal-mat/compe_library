@@ -46,3 +46,45 @@ module UnionFind
       # (self[now_node] ||= -1).negative?
     end
 end
+
+# 最小全域木
+module Kruskal
+  # [node_a, node_b, cost]を並べた二次元配列
+  def kruskal
+    transposed = self.transpose
+    transposed.pop
+    all_nodes = transposed.flatten
+    min_node, max_node = all_nodes.minmax
+    nodes_count = max_node - min_node + 1
+    uf = Array.new(nodes_count, -1)
+    uf.extend UnionFind
+    sorted_self = self.sort_by(&:last)
+    min_tree = []
+    sorted_self.each do |v|
+      break if min_tree.size == nodes_count - 1
+
+      node_a = v[0] - min_node
+      node_b = v[1] - min_node
+      next if uf.same_union?(node_a, node_b)
+
+      min_tree << v
+      uf.unite!(node_a, node_b)
+    end
+    min_tree
+  end
+end
+
+# ランダム木作成
+NODES_COUNT = gets.to_i
+uf = Array.new(NODES_COUNT, -1)
+uf.extend UnionFind
+tree = []
+NODES_COUNT.times do |left_i|
+  next if left_i == 0
+
+  right = left_i
+  right = rand(0..NODES_COUNT - 1) while uf.same_union?(left_i, right)
+  tree << "#{left_i} #{right}"
+  uf.unite!(left_i, right)
+end
+puts tree

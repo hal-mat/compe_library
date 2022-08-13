@@ -74,11 +74,10 @@ module SegmentTree
     # 全ての枝と根を更新
     def update_all!
       # 後ろから順に全てを足していく
-      last_index = self.size - 1
-      # ここのdupを消せば高速化出来る。ただしsegmentが破壊されるので注意
-      last_index.step(2, -2) do |right_child_index|
-        parent_index = right_child_index >> 1 # 1余るのは無視
-        update!(parent_index)
+      # self[0]がleafの最初のインデックス。最初に-1するのでbranchの最後のインデックスから巻き戻る
+      parent_index_i = self[0]
+      while (parent_index_i -= 1) >= 1
+        update!(parent_index_i)
       end
     end
 
