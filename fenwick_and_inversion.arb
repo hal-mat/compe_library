@@ -1,26 +1,26 @@
 # 変更した際は以下の問題で転倒数がバグってないか確認！
 # https://atcoder.jp/contests/abc264/tasks/abc264_d
 
-module MakeFenwick
-  # ref:https://github.com/universato/ac-library-rb/blob/main/lib/fenwick_tree.rb
-  # fenwick木は1-indexedなので先頭は使わない。fenwick木の長さでも入れておくこと。
-  # https://algo-logic.info/binary-indexed-tree/
-  # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
-  def make_fenwick(raw_array)
-    fenwick = [raw_array.size]
-    fenwick.concat(raw_array)
-    fenwick.each_with_index do |value, tmp_index|
-      next if index == 0
+# module MakeFenwick
+#   # ref:https://github.com/universato/ac-library-rb/blob/main/lib/fenwick_tree.rb
+#   # fenwick木は1-indexedなので先頭は使わない。fenwick木の長さでも入れておくこと。
+#   # https://algo-logic.info/binary-indexed-tree/
+#   # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
+#   def make_fenwick(raw_array)
+#     fenwick = [raw_array.size]
+#     fenwick.concat(raw_array)
+#     fenwick.each_with_index do |value, tmp_index|
+#       next if index == 0
 
-      # LSB(Least Significant Bit)
-      sum_index = tmp_index + (tmp_index & -tmp_index)
-      next if sum_index > fenwick[0]
+#       # LSB(Least Significant Bit)
+#       sum_index = tmp_index + (tmp_index & -tmp_index)
+#       next if sum_index > fenwick[0]
 
-      fenwick[sum_index] += value
-    end
-    fenwick
-  end
-end
+#       fenwick[sum_index] += value
+#     end
+#     fenwick
+#   end
+# end
 
 module MyFenwickTree
   # ref:https://github.com/universato/ac-library-rb/blob/main/lib/fenwick_tree.rb
@@ -28,6 +28,7 @@ module MyFenwickTree
   # https://algo-logic.info/binary-indexed-tree/
   # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
 
+  # 最悪[tree_size]の長さ1の配列にループでこれを入れればfenwick木はできる
   def add(index, value)
     tmp_index = index
     while tmp_index <= self_fenwick_size
@@ -46,7 +47,8 @@ module MyFenwickTree
   def left_sum(i)
     res = 0
     while i > 0
-      res += self[i] || 0
+      res += (self[i] ||= 0)
+      # res += self[i] || 0
       # LSB(Least Significant Bit)を払っている
       i &= i - 1
     end
@@ -79,27 +81,27 @@ end
 
 # 転倒数
 # https://atcoder.jp/contests/arc136/submissions/29760979
-# 生配列に直接includeして使う。makefenwickは使わないので注意
+# 数字のみの生配列に直接includeして使う
 module MyInversionNumber
   # https://scrapbox.io/pocala-kyopro/%E8%BB%A2%E5%80%92%E6%95%B0
   # https://kira000.hatenadiary.jp/entry/2019/02/23/053917
   include MyFenwickTree
   def my_inversion_number
-    raise StandardError, "not uniq" unless self.uniq == self
+    return 0 if self.size <= 1
 
-    # 0以下の数字があるとバグるので正の数の座標圧縮
+    # 座標圧縮
     self.extend CoordinateCompression
     self_uniq_hash = self.coordinate_compression
+    raw_array = self.map {|v| self_uniq_hash[v] }
 
-    fenwick = [self.max]
+    fenwick = Array.new(raw_array.max + 1, 0)
+    fenwick[0] = raw_array.max
     fenwick.extend MyFenwickTree
     answer = 0
-    self.each_with_index do |value, index|
-      compressed_value = self_uniq_hash[value]
-      # 現状の全数-現状の左合計=現状の右合計
-      tmp_right_sum = index - fenwick.left_sum(compressed_value)
-      answer += tmp_right_sum
-      fenwick.add(compressed_value, 1)
+    raw_array.each_with_index do |value, index|
+      # 現状の右合計 = 現状の全数-現状の左合計
+      answer += index - fenwick.left_sum(value)
+      fenwick.add(value, 1)
     end
     answer
   end
@@ -107,7 +109,8 @@ module MyInversionNumber
   module CoordinateCompression
     def coordinate_compression
       self_uniq = self.uniq
-      [self_uniq.sort, (1..self_uniq.size).to_a].transpose.to_h
+      self_uniq.sort.zip((1..self_uniq.size).to_a).to_h
+      # [self_uniq.sort, (1..self_uniq.size).to_a].transpose.to_h
     end
   end
 end
