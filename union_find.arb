@@ -1,11 +1,14 @@
+# node数分の-1で埋めた配列にextendする事
 module UnionFind
-  # node数分の-1で埋めた配列にextendする事
-  def has_all_united
+  def all_united?
     union_count == 1
   end
 
   def union_count
-    self.count {|v| root?(v) }
+    count { |v| v < 0 }
+
+    # これだとvにindexが入ってしまう
+    # count { |v| root?(v) }
   end
 
   def unite!(root_tree_node, branch_tree_node)
@@ -14,7 +17,10 @@ module UnionFind
     return if root_tree_root == branch_tree_root
 
     # 大きい方が根
-    root_tree_root, branch_tree_root = branch_tree_root, root_tree_root if tree_size(root_tree_root) < tree_size(branch_tree_root)
+    if tree_size(root_tree_root) < tree_size(branch_tree_root)
+      root_tree_root, branch_tree_root = branch_tree_root,
+root_tree_root
+    end
 
     self[root_tree_root] += self[branch_tree_root]
     self[branch_tree_root] = root_tree_root
@@ -39,26 +45,26 @@ module UnionFind
 
   private
 
-    def root?(now_node)
-      # 正負判定は、i > 0・i < 0が速い。i.positive?・i.negative?より、1.4倍速い。
-      self[now_node] < 0
-      # 昔は空配列もOKだったが、重いので-1埋めのみにした
-      # (self[now_node] ||= -1).negative?
-    end
+  def root?(now_node)
+    # 正負判定は、i > 0・i < 0が速い。i.positive?・i.negative?より、1.4倍速い。
+    self[now_node] < 0
+    # 昔は空配列もOKだったが、重いので-1埋めのみにした
+    # (self[now_node] ||= -1).negative?
+  end
 end
 
 # 最小全域木
 module Kruskal
   # [node_a, node_b, cost]を並べた二次元配列
   def kruskal
-    transposed = self.transpose
+    transposed = transpose
     transposed.pop
     all_nodes = transposed.flatten
     min_node, max_node = all_nodes.minmax
     nodes_count = max_node - min_node + 1
     uf = Array.new(nodes_count, -1)
     uf.extend UnionFind
-    sorted_self = self.sort_by(&:last)
+    sorted_self = sort_by(&:last)
     min_tree = []
     sorted_self.each do |v|
       break if min_tree.size == nodes_count - 1
