@@ -13,11 +13,10 @@ module MyHeap
     # 昔はここからのせり上がりを再帰関数で書いていたが、rubyはwhileで書かないと間に合わない
     # 1-indexedなら2で割るだけで親インデックスが出るのだが、shiftがややこしくなりそうなのであえて0-indexed
     child_index = size - 1
-    parent_index = parent_index_of(child_index)
-    parent_value = self[parent_index]
     # https://atcoder.jp/contests/abc252/submissions/31865081
     # マジで一回ずつswapするのではなく、既存のピラミッドを一段ずつ引き下げて出来た隙間に引数の要素をねじ込む
-    # until correct_order?(parent_value, arg_value) || child_index == 0
+    parent_index = parent_index_of(child_index)
+    parent_value = self[parent_index]
     until @correct_order_proc.call(parent_value, arg_value) || child_index == 0
       # 親の値を子の位置に引き下げ、もう一段上で再比較
       self[child_index] = parent_value
@@ -78,10 +77,12 @@ module MyHeap
   def must_parent_index_of(parent_value, parent_index)
     # indexから実際の値を取ってこないこと。実際に値を交換せずに擬似的に親valueを下ろしてきているだけなのでズレる
     left_child_index = left_child_index_of(parent_index)
+    return parent_index unless self[left_child_index]
+
     right_child_index = left_child_index + 1
     # 子の値はズレていないので直接取って良し。左と右どちらが親に近いか決める
-    stronger_child_index = if @correct_order_proc.call(self[left_child_index],
-                                                       self[right_child_index])
+    stronger_child_index = if !self[right_child_index] || @correct_order_proc.call(self[left_child_index],
+                                                                                   self[right_child_index])
                              left_child_index
                            else
                              right_child_index
@@ -89,11 +90,8 @@ module MyHeap
     # 勝ち残った方の子を親と比べる
     @correct_order_proc.call(parent_value, self[stronger_child_index]) ? parent_index : stronger_child_index
   end
-
-  # def correct_order?(parent_value, child_value)
-  #   # どちらかnilの場合はそこで終了確定
-  #   return true unless parent_value && child_value
-
-  #   parent_value[DISTANCE] < child_value[DISTANCE] # コピペする時はここを変える
-  # end
 end
+
+heap = []
+heap.extend MyHeap
+heap.write_proc! { |a, b| a < b }

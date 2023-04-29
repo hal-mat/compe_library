@@ -1,0 +1,16 @@
+# 配列用座標圧縮
+module CoordinateCompression
+  def coordinate_compression
+    self_uniq = uniq
+    [self_uniq.sort, (1..self_uniq.size).to_a].transpose.to_h
+    # [self_uniq.sort, (0..self_uniq.size - 1).to_a].transpose.to_h
+  end
+
+  def reverse_coordinate_compression
+    self_uniq = uniq
+    # [(0..self_uniq.size - 1).to_a,self_uniq.sort].transpose.to_h
+    answer = [(1..self_uniq.size).to_a, self_uniq.sort].transpose.to_h
+    answer[-1] = -1 * Float::INFINITY
+    answer
+  end
+end

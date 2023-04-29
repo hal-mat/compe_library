@@ -1,0 +1,15 @@
+# 2個比較のために配列作るのは時間がもったいない
+module MyMaxMin
+  def my_max(arg)
+    arg && self > arg ? self : arg
+  end
+
+  def my_min(arg)
+    arg && self < arg ? self : arg
+  end
+end
+
+# numericに入れると結局arrayと変わらない。高速化のためinteger
+class Integer
+  include MyMaxMin
+end

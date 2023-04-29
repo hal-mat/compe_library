@@ -1,0 +1,20 @@
+# 配列用
+module InverseCache
+  @mod = nil
+  def write_mod!(arg_mod)
+    @mod = arg_mod
+    @mod.freeze
+  end
+
+  require 'openssl' # 剰余、逆元
+
+  def inverse(arg)
+    raise StandardError, 'no mod' unless @mod
+
+    number = arg
+    # number = 10**arg
+    self[arg] ||= number.to_bn.mod_inverse(@mod).to_i
+  end
+end
+inv_cache = []
+inv_cache.extend InverseCache

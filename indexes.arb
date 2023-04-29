@@ -1,0 +1,11 @@
+# array用。indexとvalueが入れ替わる。
+module Indexes
+  def indexes
+    buffer_answer = {}
+    each_with_index do |v, i|
+      buffer_answer[v] ||= []
+      buffer_answer[v] << i
+    end
+    buffer_answer
+  end
+end

@@ -1,0 +1,6 @@
+# Array用
+module IndexAll
+  def index_all(&block)
+    map.with_index { |v, i| block.call(v) ? i : nil }.compact
+  end
+end

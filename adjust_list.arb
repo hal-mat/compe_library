@@ -1,82 +1,98 @@
+# ref:https://atcoder.jp/contests/abc291/submissions/39282338
+require 'set'
+
+# set必須なので注意
 module AdjustList
-  def adjust_list
-    buffer_answer = []
+  def adjust_list(min_nodes_count = 0)
+    buffer_answer = Array.new(min_nodes_count)
+    # buffer_answer = {}
     each do |node_a, node_b|
       node_a -= 1
       node_b -= 1
-      buffer_answer[node_a] ||= []
+      # buffer_answer[node_a] ||= []
+      buffer_answer[node_a] ||= [].to_set
       buffer_answer[node_a] << node_b
-      buffer_answer[node_b] ||= []
+      # buffer_answer[node_b] ||= []
+      buffer_answer[node_b] ||= [].to_set
       buffer_answer[node_b] << node_a
     end
     buffer_answer
   end
+
+  def single_adjust_list(min_nodes_count = 0)
+    buffer_answer = Array.new(min_nodes_count)
+    each do |node_a, node_b|
+      node_a -= 1
+      node_b -= 1
+      buffer_answer[node_a] ||= [].to_set
+      buffer_answer[node_a] << node_b
+    end
+    buffer_answer
+  end
+
+  # トポロジカルソートに使う。ref:https://atcoder.jp/contests/abc291/submissions/39401286
+  def reverse_adjust_list(min_nodes_count = 0)
+    buffer_answer = Array.new(min_nodes_count)
+    each do |node_a, node_b|
+      node_a -= 1
+      node_b -= 1
+      buffer_answer[node_b] ||= [].to_set
+      buffer_answer[node_b] << node_a
+    end
+    buffer_answer
+  end
+
+  # ufと違い片方向のみの場合のtree_size。2000*2000くらいなら通る。自分も含むので注意
+  # ref:https://atcoder.jp/contests/abc292/submissions/39754461
+  module CanVisitNodesCountFrom
+    def can_visit_nodes_count_from(root = 0)
+      stack = [root]
+      visited = [].to_set
+      while (tmp_node = stack.pop)
+        next if visited.include?(tmp_node)
+
+        visited << tmp_node
+        stack.concat self[tmp_node].to_a if self[tmp_node]
+      end
+      visited.size
+    end
+  end
+
+  # warshall_floydで通らなさそうな2000*2000ではこちらを使う。
+  # AdjustListでsetを使っている場合は通らないので配列に直す
+  # ref:https://atcoder.jp/contests/abc299/submissions/40885238
+  module BfsAdjustMatrix
+    def bfs_adjust_matrix(nodes_count)
+      answer = []
+      nodes_count.times do |start_node|
+        answer << bfs_from(start_node)
+      end
+      answer
+    end
+
+    def bfs_from(start_node)
+      answer = bfs_first_answer(start_node)
+      queue = [start_node]
+      while (tmp_node = queue.shift) && (tmp_step = answer[tmp_node])
+        (self[tmp_node] || []).each do |adj_node|
+          next if answer[adj_node]
+
+          answer[adj_node] = tmp_step + 1
+          queue << adj_node
+        end
+      end
+      answer
+    end
+
+    def bfs_first_answer(start_node)
+      answer = []
+      answer[start_node] = 0
+      answer
+    end
+    private :bfs_from, :bfs_first_answer
+  end
 end
 
 EDGES.extend AdjustList
-adj_list = EDGES.adjust_list
-p adj_list if debug
-
-# adj_listに差す
-# 多分0-indexedの連番じゃないとバグる
-# ref:https://ikatakos.com/pot/programming_algorithm/graph_theory/lowest_common_ancestor
-module EulerTour
-  require 'set'
-
-  def my_init
-    @destroyable_self = map(&:to_set)
-    depth = []
-    first_appear = []
-    # @tour_node = []
-    # @tour_depth = []
-    # prev_appear = []
-    # 自分自身を含むため葉は部分木サイズ１
-    partial_count = []
-    @stack = [[0, 0]]
-    step_i = -1
-    old_partial_count = nil
-    while (now_node, now_depth = @stack.pop)
-      step_i += 1
-      # @tour_node << now_node
-      # @tour_depth << now_depth
-      if first_appear[now_node]
-        # if prev_appear[now_node]
-        partial_count[now_node] += old_partial_count
-      else
-        partial_count[now_node] = 1
-        down_to_child! now_node
-        first_appear[now_node] = step_i
-        depth[now_node] = now_depth
-      end
-      # prev_appear[now_node] = step_i
-      old_partial_count = partial_count[now_node]
-    end
-    { depth: depth, first_appear: first_appear, partial_count: partial_count }
-  end
-
-  def down_to_child!(now_node)
-    @destroyable_self[now_node].each do |child|
-      @stack.concat([[now_node, now_depth], [child, now_depth + 1]])
-      # p [child, destroyable_self[child]]
-      @destroyable_self[child].delete now_node
-    end
-  end
-
-  # いつかlca作る
-end
-
-# AdjustListに挿して使う
-module NamoriCycle
-  require 'set'
-
-  def namori_cycle
-    destroyable_self = map(&:to_set)
-    stack = destroyable_self.map.with_index { |v, i| v.size == 1 ? i : nil }.compact
-    while (node_a = stack.pop)
-      node_b = destroyable_self[node_a].first
-      destroyable_self[node_b].delete node_a
-      stack << node_b if destroyable_self[node_b].size == 1
-    end
-    destroyable_self.map.with_index { |v, i| v.size == 2 ? i : nil }.compact
-  end
-end
+ADJ_LIST = EDGES.adjust_list
+p ADJ_LIST if debug

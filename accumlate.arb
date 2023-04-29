@@ -1,0 +1,29 @@
+# 累積和
+module Accumulate
+  def accumulate
+    buffer_answer = [0]
+    buffer_answer.extend TermSum
+    each do |v|
+      buffer_answer << buffer_answer[-1] + v
+    end
+    buffer_answer
+  end
+
+  def reverse_accumulate
+    buffer_answer = [0]
+    reverse_each do |v|
+      buffer_answer << buffer_answer[-1] + v
+    end
+    buffer_answer.reverse
+  end
+
+  # 累積和では配列頭に0がついているので一つ右でちょうどいい
+  module TermSum
+    def term_sum(raw_index_left, raw_index_right)
+      accum_index_left = raw_index_left
+      accum_index_left = 0 if accum_index_left < 0
+      accum_index_right = raw_index_right + 1
+      (self[accum_index_right] || self[-1]) - self[accum_index_left]
+    end
+  end
+end

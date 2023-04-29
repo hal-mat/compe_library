@@ -1,19 +1,30 @@
 # stringにincludeして使う
-module RunLengthEncode
+module RunLengthEncodeForString
   def run_length_encode
-    bytes_array = self.bytes
     buffer_answer = []
     now_byte = bytes_array.shift
-    now_count = 1
-    while (tmp_byte = bytes_array.shift)
-      if now_byte == tmp_byte
-        now_count += 1
+    bytes.each do |byte|
+      if !buffer_answer.empty? && buffer_answer[-1][1]
+        buffer_answer[-1][1] += 1
       else
-        buffer_answer << [now_byte, now_count]
-        now_byte = tmp_byte
-        now_count = 1
+        buffer_answer << [byte, 1]
       end
     end
     buffer_answer << [now_byte, now_count]
+  end
+end
+
+# 数字のみのarrayにincludeして使う
+module RunLengthEncodeForArray
+  def run_length_encode
+    buffer_answer = []
+    each do |value|
+      if !buffer_answer.empty? && buffer_answer[-1][0] == value
+        buffer_answer[-1][1] += 1
+      else
+        buffer_answer << [value, 1]
+      end
+    end
+    buffer_answer
   end
 end

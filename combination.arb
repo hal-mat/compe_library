@@ -1,0 +1,72 @@
+# integerにinclude
+# TODO: キャッシュとmodはクラス変数じゃなくてインスタンス変数でよくないか
+module Combination
+  def combination(choice)
+    my_error(choice)
+    choice = self - choice if (choice << 1) > self
+    numerator = 1
+    denominator = 1
+    loop_i = 0
+    while (loop_i += 1) <= choice
+      numerator *= self + 1 - loop_i
+      denominator *= loop_i
+    end
+    numerator / denominator
+  end
+
+  def permutation_mod(choice)
+    my_error(choice)
+    raise StandardError, 'no mod' unless MOD
+
+    (factorial_mod(self) * mod_inverse_with_cache(factorial_mod(self - choice))) % MOD
+    # numerator = factorial_mod(self)
+    # denomi_inverse = mod_inverse_with_cache(factorial_mod(self - choice))
+    # numerator.mod_mul(denomi_inverse, @@mod).to_i
+  end
+
+  def combination_mod(choice)
+    my_error(choice)
+    raise StandardError, 'no mod' unless MOD
+
+    choice = self - choice if (choice << 1) > self
+    # p [self, choice]
+
+    numerator = factorial_mod(self)
+    denomi_inverse = denominator_inverse(factorial_mod(choice), factorial_mod(self - choice))
+    (numerator * denomi_inverse) % MOD
+  end
+
+  def my_error(choice)
+    raise StandardError, 'self is lower than choice' if self < choice
+    raise StandardError, 'need over 0' if choice < 0
+  end
+
+  @@factorial_mod_cache = [1]
+  def factorial_mod(num)
+    # 元は再帰関数だったがstackの深さを変えるのが面倒
+    @@factorial_mod_cache << (@@factorial_mod_cache[-1] * @@factorial_mod_cache.size) % MOD until @@factorial_mod_cache[num]
+    # p @@factorial_mod_cache
+    @@factorial_mod_cache[num]
+  end
+
+  require 'openssl' # 剰余、逆元
+  # bnは死ぬほど重いからinverse以外使うな
+  @@inverse_cache = {}
+  def mod_inverse_with_cache(num)
+    (@@inverse_cache[num] ||= num.to_bn.mod_inverse(MOD).to_i)
+  end
+
+  def denominator_inverse(a, b)
+    denominator = (a * b) % MOD
+    return @@inverse_cache[denominator] if @@inverse_cache[denominator]
+
+    a_inverse = mod_inverse_with_cache(a)
+    b_inverse = mod_inverse_with_cache(b)
+    @@inverse_cache[denominator] = (a_inverse * b_inverse) % MOD
+  end
+  private :factorial_mod, :mod_inverse_with_cache, :denominator_inverse, :my_error
+end
+
+class Integer
+  include Combination
+end

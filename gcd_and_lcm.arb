@@ -1,0 +1,10 @@
+# array用
+module GcdAndLcm
+  def gcd
+    inject(:gcd)
+  end
+
+  def lcm
+    inject(:lcm)
+  end
+end
