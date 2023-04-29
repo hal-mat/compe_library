@@ -1,0 +1,13 @@
+# integer用
+def factorial
+  buffer_answer = 1
+  loop_i = 1
+  while (loop_i += 1) <= self
+    buffer_answer *= loop_i
+  end
+  buffer_answer
+end
+
+class Integer
+  include MyCeil
+end

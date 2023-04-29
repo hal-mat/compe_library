@@ -1,13 +1,62 @@
+# 有向グラフの場合はb→aを消す
 module AdjustMatrix
   def adjust_matrix(nodes_count)
     buffer_answer = Array.new(nodes_count) { [] }
-    self.each do |node_a, node_b, distance|
+    each do |node_a, node_b, distance|
       node_a -= 1
       node_b -= 1
-      buffer_answer[node_a][node_b] = distance
+      buffer_answer[node_a][node_b] ||= distance
+      # buffer_answer[node_a][node_b] = distance if buffer_answer[node_a][node_b] > distance
       buffer_answer[node_b][node_a] = distance
     end
     # buffer_answer.each_with_index {|row, column_i| row[column_i] = 0 }
-    buffer_answer
+    buffer_answer.extend WarshallFloyd
+  end
+
+  # 隣接マトリックスにextendする。行は数を揃えておくこと
+  module WarshallFloyd
+    # https://atcoder.jp/contests/abc243/submissions/30210271
+    # https://atcoder.jp/contests/abc257/submissions/32803428
+    def warshall_floyd!
+      # nilは無限大と同じ扱いとする。0のマスと無限大のマスがどちらもnilになっていると混乱するので、0マスはすべて0で埋めておく
+      zero_diagonal!
+      # ここから普通のワーシャルフロイド
+      @nodes_count = size
+      relay_node = -1
+      while (relay_node += 1) <= @nodes_count - 1
+        start_node_loop!(relay_node)
+      end
+    end
+
+    private
+
+    def zero_diagonal!
+      # nilは無限大と同じ扱いとする。0のマスと無限大のマスがどちらもnilになっていると混乱するので、0マスはすべて0で埋めておく
+      each_with_index { |row, row_i| row[row_i] = 0 }
+    end
+
+    def start_node_loop!(relay_node)
+      start_node = -1
+      while (start_node += 1) <= @nodes_count - 1
+        # start_node == relay_node判定を入れるとかえって遅くなる。
+        next unless (start_relay_cost = self[start_node][relay_node])
+
+        goal_node_loop!(relay_node, start_node, start_relay_cost)
+      end
+    end
+
+    def goal_node_loop!(relay_node, start_node, start_relay_cost)
+      goal_node = -1
+      while (goal_node += 1) <= @nodes_count - 1
+        # goal_node == relay_node || goal_node == start_node判定を入れるとかえって遅くなる
+        next unless (relay_goal_cost = self[relay_node][goal_node])
+
+        sum_cost = start_relay_cost + relay_goal_cost
+        if !self[start_node][goal_node] || self[start_node][goal_node] > sum_cost
+          self[start_node][goal_node] =
+            sum_cost
+        end
+      end
+    end
   end
 end

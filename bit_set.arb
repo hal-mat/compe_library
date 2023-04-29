@@ -1,0 +1,10 @@
+# integerにinclude
+module BitSet
+  def pop_count
+    to_s(2).count('1')
+  end
+
+  def all_pop?(test_bitset)
+    self & test_bitset == test_bitset
+  end
+end

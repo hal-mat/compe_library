@@ -1,0 +1,10 @@
+# integer用。分子.分母
+module MyCeil
+  def my_ceil(denominator)
+    (self + denominator - 1) / denominator
+  end
+end
+
+class Integer
+  include MyCeil
+end

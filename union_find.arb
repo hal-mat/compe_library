@@ -1,4 +1,4 @@
-# node数分の-1で埋めた配列にextendする事
+# node数分の-1で埋めた配列にextendする事。55行
 module UnionFind
   def all_united?
     union_count == 1
@@ -6,24 +6,21 @@ module UnionFind
 
   def union_count
     count { |v| v < 0 }
-
-    # これだとvにindexが入ってしまう
-    # count { |v| root?(v) }
   end
 
   def unite!(root_tree_node, branch_tree_node)
     root_tree_root = root_of!(root_tree_node)
     branch_tree_root = root_of!(branch_tree_node)
-    return if root_tree_root == branch_tree_root
+    return false if root_tree_root == branch_tree_root
 
     # 大きい方が根
     if tree_size(root_tree_root) < tree_size(branch_tree_root)
-      root_tree_root, branch_tree_root = branch_tree_root,
-root_tree_root
+      root_tree_root, branch_tree_root = branch_tree_root, root_tree_root
     end
 
     self[root_tree_root] += self[branch_tree_root]
     self[branch_tree_root] = root_tree_root
+    true
   end
 
   def same_union?(node_a, node_b)
@@ -31,25 +28,47 @@ root_tree_root
   end
 
   def root_of!(now_node)
-    # ガード節よりif elseの方がやや早い
-    if root?(now_node)
-      now_node
-    else
-      self[now_node] = root_of!(self[now_node])
+    # ガード節よりif elseの方がやや早いが、formatterが回って飼ってにガード節に
+    return now_node if root?(now_node)
+
+    # 再帰よりstackの方が早い
+    stack = [now_node]
+    parent_node = self[now_node]
+    until root?(parent_node)
+      stack << parent_node
+      parent_node = self[parent_node]
     end
+    stack.each { |v| self[v] = parent_node }
+    parent_node
   end
 
   def tree_size(node)
     self[root_of!(node)] * -1
   end
 
-  private
-
   def root?(now_node)
     # 正負判定は、i > 0・i < 0が速い。i.positive?・i.negative?より、1.4倍速い。
     self[now_node] < 0
     # 昔は空配列もOKだったが、重いので-1埋めのみにした
     # (self[now_node] ||= -1).negative?
+  end
+end
+
+require 'set'
+# 短縮版
+# ref:https://twitter.com/0x3b800001/status/1591432107905409024
+class DSU < Hash
+  def merge(i, j)
+    x = self[i] ||= [i].to_set
+    y = self[j] ||= [j].to_set
+    return false if x == y
+
+    x, y = y, x if x.size < y.size
+    # eachは罠？　実用前に確認
+    y.each do |v|
+      self[v] = x << v
+    end
+    true
   end
 end
 

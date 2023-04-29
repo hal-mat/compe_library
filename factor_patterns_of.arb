@@ -1,0 +1,19 @@
+# integerに差す。一定数以下の因数の組み合わせ。factor_patterns_of[積]=組み合わせの数
+module FactorPatternsOf
+  def factor_patterns_of
+    answer = []
+    i = 0
+    while (i += 1)**2 <= self
+      j = i - 1
+      while (tmp_prod = i * (j += 1)) <= self
+        answer[tmp_prod] ||= 0
+        answer[tmp_prod] += (i == j ? 1 : 2)
+      end
+    end
+    answer
+  end
+end
+
+class Integer
+  include FactorPatternsOf
+end

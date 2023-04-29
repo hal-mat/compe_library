@@ -1,0 +1,45 @@
+# コスト付き。内部でsetをrequireしているので注意
+module AdjustListWithCost
+  def adjust_list_with_cost
+    buffer_answer = []
+    # buffer_answer = {}
+    each do |node_a, node_b, cost|
+      node_a -= 1
+      node_b -= 1
+      buffer_answer[node_a] ||= {}
+      buffer_answer[node_a][node_b] ||= cost
+      buffer_answer[node_a][node_b] = cost if buffer_answer[node_a][node_b] > cost
+    end
+    buffer_answer.extend TopologicalSortDesc
+  end
+
+  # ref:https://atcoder.jp/contests/abc191/submissions/20256694
+  module TopologicalSortDesc
+    require 'set'
+    def topological_sort_desc(nodes_count)
+      answer = []
+      visited = Set.new
+      nodes_count.times do |i|
+        next if visited.include?(i)
+
+        answer.concat(first_appear_reverse(i, visited))
+      end
+      answer
+    end
+
+    def first_appear_reverse(first_node, visited)
+      answer = []
+      stack = [first_node]
+      while (j = stack.shift)
+        next if visited.include?(j)
+
+        visited << j
+        answer.unshift(j)
+        self[j]&.each_key { |k| stack << k unless visited.include?(k) }
+      end
+      answer
+    end
+
+    private_methods :first_appear_reverse
+  end
+end

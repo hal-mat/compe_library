@@ -1,0 +1,5 @@
+require 'prime'
+
+# 素数列挙。これ以上列挙するとtleするので何か間違っている
+prime = Prime.instance
+PRIME_ARRAY = prime.each(3 * 10**6).to_a

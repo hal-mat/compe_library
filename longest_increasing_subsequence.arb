@@ -1,0 +1,15 @@
+# array用
+module LongestIncreasingSubsequence
+  def longest_increasing_subsequence
+    ret = []
+    each do |i|
+      idx = ret.bsearch_index { |x| x >= i } || ret.size
+      ret[idx] = i
+    end
+    ret.size
+  end
+end
+
+class Array
+  include LongestIncreasingSubsequence
+end

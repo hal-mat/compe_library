@@ -1,105 +1,127 @@
 # 遅延セグ木ではなく通常セグ木。いつか遅延セグ木も書く
-# ref:https://zenn.dev/magurofly/articles/3aa1084dfecce2
-# ref:https://github.com/universato/ac-library-rb/blob/main/lib/segtree.rb
-# https://tsutaj.hatenablog.com/entry/2017/03/29/204841
 module SegmentTree
-  # segment木はその性質上、元の配列は全て葉であり、それ以外に枝(と根)が必須
-  # この枝(と根)の数をいちいち算出していてはTLEするので、配列の先頭に葉が始まるindexの値を入れておく。
-  # なんでmodule内でインスタンス変数を使わんのだ？
-  # https://mirichi.hatenadiary.org/entry/20140206/p1
   # 根は[1]からスタート
-  def init_segment_tree!
-    # selfは全て葉。この上に枝(と根)の情報を持っておくのがセグ木
-    self_size = self.size
-    leaf_bit_size = self_size.bit_length
-    # これが枝(と根)のノード数
-    # branch_size = 1 << leaf_bit_size - 1
-    leaf_begin_index = 1 << leaf_bit_size
-    segment_tree = Array.new(leaf_begin_index)
-    segment_tree[0] = leaf_begin_index
-    self.replace(segment_tree.concat(self))
-    # これで根と枝を持たせたのでOK。次にupdate
+  def init_segment_tree!(&arg_block)
+    @parent_proc = arg_block.freeze
+    @leaf_begin_index = 1 << size.bit_length.freeze
+    @segment_tree = Array.new(@leaf_begin_index, 0).concat(self)
     update_all!
+    # @segment_tree = Array.new(@leaf_begin_index << 1, 0)
   end
 
-  def set(leaf_index, value)
-    real_index = self[0] + leaf_index
-    self[real_index] = value
-    child_index = real_index
+  def []=(leaf_index, value)
+    super(leaf_index, value)
+    child_index = @leaf_begin_index + leaf_index
+    @segment_tree[child_index] = value
     until child_index == 1
-      parent_index = child_index / 2
+      parent_index = parent_index_of(child_index)
       update!(parent_index)
       child_index = parent_index
     end
   end
 
-  def get(leaf_index)
-    real_index = self[0] + leaf_index
-    self[real_index]
-  end
-
   # op(a[l], ..., a[r - 1]) を返します。引数は半開区間です
   def prod(l, r)
-    return 0 if l == r
+    return 0 if l >= r
 
-    sml = 0
-    smr = 0
-    l += self[0]
-    r += self[0]
-
+    answer = 0
+    l += @leaf_begin_index
+    r += @leaf_begin_index
     while l < r
       # 引数が偶数の場合は計算しなくても上行けば合計が記録済み
-      # 引数が奇数の場合は上に行くと不味いので、ここまでの合計を記録してから一つ内側に移動
+      # 引数が奇数の場合は上に行くと左の要素まで範囲に入ってしまうので、ここまでを記録してから一つ右側のペアに移動
       if l[0] == 1
-        sml += self[l]
+        answer = @parent_proc.call(answer, @segment_tree[l])
         l += 1
       end
-      if r[0] == 1
-        smr += self[r - 1]
-        r -= 1
-      end
-      l /= 2
-      r /= 2
-      p [sml, smr]
-      p [l, r]
+      # 引数が偶数の場合はどちらも記録せずに上行ってOK
+      # 引数が奇数の場合はそのまま上に行くと左の要素が範囲から外れて消えてしまうので、左を記録してから上に移動
+      answer = @parent_proc.call(answer, @segment_tree[r - 1]) if r[0] == 1
+      l = parent_index_of(l)
+      r = parent_index_of(r)
     end
+    answer
+  end
 
-    sml + smr
+  def all_prod
+    @segment_tree[1]
   end
 
   # 二分探索のmax_rightとmin_leftもいつか書く
 
   private
 
-    # 全ての枝と根を更新
-    def update_all!
-      # 後ろから順に全てを足していく
-      # self[0]がleafの最初のインデックス。最初に-1するのでbranchの最後のインデックスから巻き戻る
-      parent_index_i = self[0]
-      while (parent_index_i -= 1) >= 1
-        update!(parent_index_i)
-      end
+  # 全ての枝と根を更新
+  def update_all!
+    # 後ろから順に全てを足していく
+    # self[0]がleafの最初のインデックス。最初に-1するのでbranchの最後のインデックスから巻き戻る
+    parent_index_i = @leaf_begin_index
+    while (parent_index_i -= 1) >= 1
+      update!(parent_index_i)
     end
+  end
 
-    def update!(parent_index)
-      # 左の子がない場合はそもそも両方とも子がないので親もnilでOK。右の子だけがnilはありえるので対策を入れる
-      return unless self[2 * parent_index]
+  def update!(parent_index)
+    # 左の子がない場合はそもそも両方とも子がないので親もnilでOK。右の子だけがnilはありえるので対策を入れる
+    left_child_index = parent_index << 1
+    return unless @segment_tree[left_child_index]
 
-      self[parent_index] = self[2 * parent_index] + (self[2 * parent_index + 1] || 0)
-    end
+    right_child_index = left_child_index + 1
+    @segment_tree[parent_index] = if @segment_tree[right_child_index]
+                                    @parent_proc.call(@segment_tree[left_child_index], @segment_tree[right_child_index])
+                                  else
+                                    @segment_tree[left_child_index]
+                                  end
+  end
+
+  def parent_index_of(child_index)
+    child_index >> 1
+  end
 end
 
-ex_array = (0..9).to_a
-ex_array.extend SegmentTree
-ex_array.init_segment_tree!
-p "ex_array"
-p ex_array
-ex_array.set(1, 10)
-p "set"
-p ex_array
-p "ex_array.prod(0, 7)"
-p ex_array.prod(0, 7)
-p "ex_array.prod(1, 7)"
-p ex_array.prod(1, 7)
-p "ex_array.prod(1, 8)"
-p ex_array.prod(1, 8)
+dp = Array.new(300_001, 0)
+dp.extend SegmentTree
+dp.init_segment_tree! { |a, b| a > b ? a : b }
+
+# https://atcoder.jp/contests/abl/submissions/18547121
+
+N, K = gets.chomp.split(' ').map(&:to_i)
+INF = 10**6
+class SegmentTree
+  def initialize(size)
+    @n = 1
+    @n *= 2 while @n < size
+    @node = Array.new(2 * @n, 0)
+  end
+
+  def update(index, val)
+    i = index + @n - 1
+    @node[i] = val
+    while i > 0
+      i = (i - 1) / 2
+      l = @node[2 * i + 1]
+      r = @node[2 * i + 2]
+      @node[i] = l > r ? l : r
+    end
+    p @node
+  end
+
+  def get_max(left, right)
+    ret = 0
+    left += @n - 1
+    right += @n - 1
+    while left < right
+      if left.even?
+        ret = @node[left] if ret < @node[left]
+        left += 1
+      end
+      if right.even?
+        right -= 1
+        ret = @node[right] if ret < @node[right]
+      end
+      left /= 2
+      right /= 2
+    end
+    ret
+  end
+end
