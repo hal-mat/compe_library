@@ -1,0 +1,48 @@
+# array用。stringに入れる時は先にbytesしておく事
+# ref:https://qiita.com/Pro_ktmr/items/16904c9570aa0953bf05
+# ref:https://atcoder.jp/contests/abc284/submissions/37868649
+module ZAlgorithm
+  def z_algorithm
+    return [] if length == 0
+
+    # answer = Array.new(length, 0)
+    # answer[0] = length
+    answer = [length]
+    shorter_repeat_begin_index = 1
+    shorter_repeat_length = 0
+    while shorter_repeat_begin_index < length
+      # 愚直探索
+      shorter_repeat_length = new_shorter_repeat_length(shorter_repeat_length, shorter_repeat_begin_index)
+      answer[shorter_repeat_begin_index] = shorter_repeat_length
+      if shorter_repeat_length == 0
+        shorter_repeat_begin_index += 1
+        next
+      end
+      # 計算済みの部分と一致しているか確認。一致していればanswer前半部分を転記
+      jump_length = 0
+      # 転記先が範囲内であり、そもそも転記先+転記した長さが前半計算の長さより短い
+      # 転記先+転記した長さが前半計算の長さぴったりはNG。もっと後まで共通部分が続いている可能性がある
+      # while answer[shorter_repeat_begin_index + jump_length] && jump_length+answer[jump_length]<shorter_repeat_length
+      while (jump_length += 1) && jump_length + answer[jump_length] < shorter_repeat_length
+        answer[shorter_repeat_begin_index + jump_length] = answer[jump_length]
+      end
+      shorter_repeat_begin_index += jump_length
+      shorter_repeat_length -= jump_length
+    end
+
+    answer
+  end
+
+  # 不一致になるまで伸びるので注意
+  def new_shorter_repeat_length(old_shorter_repeat_length, shorter_repeat_begin_index)
+    answer = old_shorter_repeat_length
+    shorter_bytes_end_index = shorter_repeat_begin_index + answer
+    while self[shorter_bytes_end_index] && self[answer] == self[shorter_bytes_end_index]
+      answer += 1
+      shorter_bytes_end_index = shorter_repeat_begin_index + answer
+    end
+    answer
+  end
+
+  private :new_shorter_repeat_length
+end

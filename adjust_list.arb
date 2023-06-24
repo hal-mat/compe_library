@@ -9,14 +9,16 @@ module AdjustList
     each do |node_a, node_b|
       node_a -= 1
       node_b -= 1
-      # buffer_answer[node_a] ||= []
-      buffer_answer[node_a] ||= [].to_set
+      # setの<<はともかく|はイメージよりも遅いので注意
+      buffer_answer[node_a] ||= []
+      # buffer_answer[node_a] ||= [].to_set
       buffer_answer[node_a] << node_b
-      # buffer_answer[node_b] ||= []
-      buffer_answer[node_b] ||= [].to_set
+      buffer_answer[node_b] ||= []
+      # buffer_answer[node_b] ||= [].to_set
       buffer_answer[node_b] << node_a
     end
     buffer_answer
+    # buffer_answer.extend Tree
   end
 
   def single_adjust_list(min_nodes_count = 0)
@@ -90,6 +92,69 @@ module AdjustList
       answer
     end
     private :bfs_from, :bfs_first_answer
+  end
+
+  # 木構造。いつか「各ノードの深さ」の配列も作る
+  module Tree
+    def tree_init(root = 0)
+      init_instance_variable(root)
+      tmp_row = [root]
+      visited = [root].to_set
+      while tmp_row.any?
+        @depth_pyramid << tmp_row.dup
+        next_row, visited = next_row_visited(tmp_row, visited)
+        tmp_row = next_row
+      end
+      @has_initialized = true
+    end
+
+    def parent_of(node)
+      raise StandardError, 'not initialized' unless @has_initialized
+
+      @parent_of[node]
+    end
+
+    def children_of(node)
+      raise StandardError, 'not initialized' unless @has_initialized
+
+      @children_of[node]
+    end
+
+    def depth_pyramid
+      raise StandardError, 'not initialized' unless @has_initialized
+
+      @depth_pyramid
+    end
+
+    def init_instance_variable(root)
+      @parent_of = []
+      @children_of = []
+      @depth_pyramid = []
+      @parent_of[root] = nil
+    end
+
+    def next_row_visited(tmp_row, visited)
+      next_row = []
+      tmp_row.each do |tmp_node|
+        self[tmp_node].to_a.each do |adj_node|
+          next if visited.include?(adj_node)
+
+          visited << adj_node
+          set_parent_child(tmp_node, adj_node)
+          next_row << adj_node
+        end
+      end
+      [next_row, visited]
+    end
+
+    def set_parent_child(parent, child)
+      @children_of[parent] ||= []
+      # @children_of[node] ||= [].to_set
+      @children_of[parent] << child
+      @parent_of[child] = parent
+    end
+
+    private :set_parent_child, :next_row_visited, :init_instance_variable
   end
 end
 

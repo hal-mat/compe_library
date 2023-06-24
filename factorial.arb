@@ -1,13 +1,19 @@
-# integer用
-def factorial
-  buffer_answer = 1
-  loop_i = 1
-  while (loop_i += 1) <= self
-    buffer_answer *= loop_i
+# array用
+module Factorial
+  def my_init(mod = nil)
+    self[0] = 1
+    @mod = mod
   end
-  buffer_answer
+
+  def [](index)
+    answer = super(index)
+    return answer if answer
+
+    answer = self[index - 1] * index
+    answer %= @mod if @mod
+    self[index] = answer
+  end
 end
 
-class Integer
-  include MyCeil
-end
+fact = []
+fact.extend Factorial

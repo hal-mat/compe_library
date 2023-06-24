@@ -1,0 +1,80 @@
+# ref:https://atcoder.jp/contests/abc306/submissions/42346841
+class Heap
+  def debugging
+    p [@heap_tally, @heap]
+  end
+
+  def initialize(&block)
+    @heap = []
+    # heap_shiftで実際にshift操作をしない事で高速化
+    # どんどんheapが伸びて階層が深くなるので、「heap管理するのはここまで。これ以降はゴミデータ」という変数を管理
+    @heap_size = 0
+    @proc = block
+    @proc.freeze
+    @heap_tally = Hash.new(0)
+  end
+
+  def heap_push!(arg_value)
+    tmp_child_index = @heap_size
+    tmp_parent_index = (tmp_child_index - 1) >> 1
+    while tmp_child_index > 0 && !@proc.call(@heap[tmp_parent_index], arg_value)
+      # break if @proc.call(@heap[tmp_parent_index], arg_value)
+
+      @heap[tmp_child_index] = @heap[tmp_parent_index]
+      tmp_child_index = tmp_parent_index
+      tmp_parent_index = (tmp_child_index - 1) >> 1
+    end
+    @heap[tmp_child_index] = arg_value
+    @heap_size += 1
+    @heap_tally[arg_value] += 1
+  end
+
+  def heap_shift!
+    answer_can_delete = false
+    until answer_can_delete
+      return if @heap_size <= 0
+
+      answer_can_delete = delete?(answer = @heap[0])
+      @heap_size -= 1
+      heap_down!(@heap[@heap_size]) # たった今はみ出た値
+    end
+    answer
+  end
+
+  def delete?(arg)
+    # tallyの個数が負になってしまったらfalse
+    return false unless member?(arg)
+
+    @heap_tally[arg] -= 1
+  end
+
+  def member?(arg)
+    @heap_tally[arg] > 0
+  end
+
+  def first
+    @heap[0]
+  end
+
+  def heap_down!(new_first_value)
+    tmp_parent_index = 0
+    until (tmp_strongest_index = strongest_index(new_first_value, tmp_parent_index)) == tmp_parent_index
+      @heap[tmp_parent_index] = @heap[tmp_strongest_index]
+      tmp_parent_index = tmp_strongest_index
+    end
+    @heap[tmp_parent_index] = new_first_value
+  end
+  private :heap_down!
+
+  def strongest_index(new_first_value, tmp_parent_index)
+    return tmp_parent_index if (left_child_index = (tmp_parent_index << 1) + 1) >= @heap_size
+
+    stronger_child_index = left_child_index
+    if (right_child_index = left_child_index + 1) < @heap_size &&
+       @proc.call(@heap[right_child_index], @heap[stronger_child_index])
+      stronger_child_index = right_child_index
+    end
+    @proc.call(new_first_value, @heap[stronger_child_index]) ? tmp_parent_index : stronger_child_index
+  end
+  private :strongest_index
+end
