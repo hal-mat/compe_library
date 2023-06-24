@@ -7,11 +7,13 @@ module MyFenwickTree
   # https://qiita.com/DaikiSuyama/items/7295f5160a51684554a7
 
   def add(index, value = 1)
+    raise StandardError if index < 1
+
     tmp_index = index
-    while tmp_index <= self_fenwick_size
-      self[tmp_index] ||= 0
-      self[tmp_index] += value
-      # LSB(Least Significant Bit)
+    self_fenwick_size_cache = self_fenwick_size
+    while tmp_index <= self_fenwick_size_cache
+      self[tmp_index] = value + self[tmp_index].to_i
+      # 最下位の1を繰り上げる
       tmp_index += (tmp_index & -tmp_index)
     end
   end
@@ -20,19 +22,21 @@ module MyFenwickTree
     left_sum(size - 1)
   end
 
-  # [l, r), l以上r未満
+  # 1-indexedでl以上r以下
   def sum_between(left, right)
-    left_sum(right) - left_sum(left)
+    left_sum(right) - left_sum(left - 1)
   end
 
-  # index未満
+  # 1-indexedでindex以下
   def left_sum(index)
+    raise StandardError if index < 0
+
     res = 0
-    while index > 0
-      res += (self[index] ||= 0)
-      # res += self[index] || 0
-      # LSB(Least Significant Bit)を払っている
-      index &= index - 1
+    tmp_index = index
+    while tmp_index > 0
+      res += self[tmp_index].to_i
+      # 最下位の1を払う
+      tmp_index &= tmp_index - 1
     end
     res
   end

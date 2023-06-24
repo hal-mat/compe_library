@@ -1,15 +1,21 @@
 # 遅延セグ木ではなく通常セグ木。いつか遅延セグ木も書く
 module SegmentTree
   # 根は[1]からスタート
-  def init_segment_tree!(&arg_block)
-    @parent_proc = arg_block.freeze
-    @leaf_begin_index = 1 << size.bit_length.freeze
-    @segment_tree = Array.new(@leaf_begin_index, 0).concat(self)
+  def init_segment_tree!(element = nil, &arg_block)
+    # 単位元。合計の初期値など
+    @element = element
+    @element.freeze
+    @parent_proc = arg_block
+    @parent_proc.freeze
+    @leaf_begin_index = 1 << size.bit_length
+    @leaf_begin_index.freeze
+    @segment_tree = Array.new(@leaf_begin_index).concat(self)
     update_all!
-    # @segment_tree = Array.new(@leaf_begin_index << 1, 0)
   end
 
   def []=(leaf_index, value)
+    raise StandardError, 'too large index' if leaf_index >= size
+
     super(leaf_index, value)
     child_index = @leaf_begin_index + leaf_index
     @segment_tree[child_index] = value
@@ -22,9 +28,9 @@ module SegmentTree
 
   # op(a[l], ..., a[r - 1]) を返します。引数は半開区間です
   def prod(l, r)
-    return 0 if l >= r
+    return false if l >= r
 
-    answer = 0
+    answer = @element
     l += @leaf_begin_index
     r += @leaf_begin_index
     while l < r
@@ -54,34 +60,40 @@ module SegmentTree
   # 全ての枝と根を更新
   def update_all!
     # 後ろから順に全てを足していく
-    # self[0]がleafの最初のインデックス。最初に-1するのでbranchの最後のインデックスから巻き戻る
+    # leafの最初のインデックスから最初に-1するので、branchの最後のインデックスから巻き戻る
     parent_index_i = @leaf_begin_index
     while (parent_index_i -= 1) >= 1
+      # p @segment_tree
       update!(parent_index_i)
     end
   end
 
   def update!(parent_index)
-    # 左の子がない場合はそもそも両方とも子がないので親もnilでOK。右の子だけがnilはありえるので対策を入れる
-    left_child_index = parent_index << 1
-    return unless @segment_tree[left_child_index]
-
-    right_child_index = left_child_index + 1
-    @segment_tree[parent_index] = if @segment_tree[right_child_index]
-                                    @parent_proc.call(@segment_tree[left_child_index], @segment_tree[right_child_index])
-                                  else
-                                    @segment_tree[left_child_index]
-                                  end
+    left_child_index, right_child_index = child_indexes_of(parent_index)
+    left_child_value = @segment_tree[left_child_index]
+    right_child_value = @segment_tree[right_child_index]
+    new_parent_value = if left_child_value && right_child_value
+                         @parent_proc.call(left_child_value, right_child_value)
+                       else
+                         left_child_value || right_child_value
+                       end
+    @segment_tree[parent_index] = new_parent_value
   end
 
   def parent_index_of(child_index)
     child_index >> 1
   end
+
+  def child_indexes_of(parent_index)
+    left_child_index = parent_index << 1
+    right_child_index = left_child_index | 1
+    [left_child_index, right_child_index]
+  end
 end
 
 dp = Array.new(300_001, 0)
 dp.extend SegmentTree
-dp.init_segment_tree! { |a, b| a > b ? a : b }
+dp.init_segment_tree! { |a, b| (a > b) ? a : b }
 
 # https://atcoder.jp/contests/abl/submissions/18547121
 
@@ -101,7 +113,7 @@ class SegmentTree
       i = (i - 1) / 2
       l = @node[2 * i + 1]
       r = @node[2 * i + 2]
-      @node[i] = l > r ? l : r
+      @node[i] = (l > r) ? l : r
     end
     p @node
   end

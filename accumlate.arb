@@ -1,23 +1,26 @@
 # 累積和
 module Accumulate
-  def accumulate
-    buffer_answer = [0]
+  def accumulate(first_value = 0, &arg_block)
+    buffer_answer = [first_value]
     buffer_answer.extend TermSum
     each do |v|
-      buffer_answer << buffer_answer[-1] + v
+      buffer_answer << arg_block.call(buffer_answer[-1], v)
+      # buffer_answer << buffer_answer[-1] + v
     end
     buffer_answer
   end
 
-  def reverse_accumulate
+  def reverse_accumulate(&arg_block)
     buffer_answer = [0]
     reverse_each do |v|
-      buffer_answer << buffer_answer[-1] + v
+      buffer_answer << arg_block.call(buffer_answer[-1], v)
+      # buffer_answer << buffer_answer[-1] + v
     end
     buffer_answer.reverse
   end
 
-  # 累積和では配列頭に0がついているので一つ右でちょうどいい
+  # 累積和では配列頭に0がついているので一つ右でちょうどいい.
+  # 今のところ累積和でしか使えないので、いつかブロック引いてどんなモノイドでも使えるようにする
   module TermSum
     def term_sum(raw_index_left, raw_index_right)
       accum_index_left = raw_index_left
