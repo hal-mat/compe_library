@@ -18,8 +18,6 @@ class Heap
     tmp_child_index = @heap_size
     tmp_parent_index = (tmp_child_index - 1) >> 1
     while tmp_child_index > 0 && !@proc.call(@heap[tmp_parent_index], arg_value)
-      # break if @proc.call(@heap[tmp_parent_index], arg_value)
-
       @heap[tmp_child_index] = @heap[tmp_parent_index]
       tmp_child_index = tmp_parent_index
       tmp_parent_index = (tmp_child_index - 1) >> 1
