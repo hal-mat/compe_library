@@ -1,4 +1,4 @@
-# 空配列にいちいちheap_pushすると重いので、heap_pushが必要になってからsortして使う
+# ref:https://atcoder.jp/contests/abc306/submissions/42346841
 module MyHeap
   # https://qiita.com/k-penguin-sato/items/7f98335ef631ea5ce7ad
   # 使えるかわからんので注意
@@ -9,22 +9,20 @@ module MyHeap
   end
 
   def heap_push!(arg_value)
-    # どうせ消すのでfalsyな値でなければなんでも良い
-    self << true
-    child_index = size - 1
+    tmp_child_index = size
     # 昔はここからのせり上がりを再帰関数で書いていたが、rubyはwhileで書かないと間に合わない
     # 1-indexedなら2で割るだけで親インデックスが出るのだが、shiftがややこしくなりそうなのであえて0-indexed
     # https://atcoder.jp/contests/abc252/submissions/31865081
     # マジで一回ずつswapするのではなく、既存のピラミッドを一段ずつ引き下げて出来た隙間に引数の要素をねじ込む
-    parent_index, parent_value = parent_index_of(child_index)
-    until not_need_swap(parent_value, arg_value, child_index)
-      # 親の値を子の位置に引き下げ、もう一段上で再比較
-      self[child_index] = parent_value
-      child_index = parent_index
-      parent_index, parent_value = parent_index_of(child_index)
+    tmp_parent_index = (tmp_child_index - 1) >> 1
+    # parent_index, parent_value = parent_index_and_value_of(child_index)
+    while tmp_child_index > 0 && !@correct_order_proc.call(self[tmp_parent_index], arg_value)
+      self[tmp_child_index] = self[tmp_parent_index]
+      tmp_child_index = tmp_parent_index
+      tmp_parent_index = (tmp_child_index - 1) >> 1
     end
     # それ以上上がれない場合は末尾の値を現在のchildの位置にねじ込んで終了
-    self[child_index] = arg_value
+    self[tmp_child_index] = arg_value
   end
 
   def heap_shift!
@@ -44,60 +42,30 @@ module MyHeap
 
   private
 
-  def parent_index_and_value_of(child_index)
-    index = (child_index - 1) >> 1
-    value = self[index]
-    [index, value]
-  end
-
   # AtCoder Libraryのup,downと逆なので注意。下から持ち上げるのがup,頂上から下ろすのがdown
   def heap_down!
-    # 昔は再帰関数で書いていたが、rubyはwhileで書かないと間に合わない
-    # 1-indexedなら2倍すれば左の子インデックスになるが、shiftがややこしいので0-indexed
-    # マジで一回ずつswapするのではなく、既存のピラミッドを一段ずつ引き下げて出来た隙間に引数の要素をねじ込む
     first_value = self[0]
     tmp_parent_index = 0
-
     # must_parent_indexが親のindexのまま→正位置。終了
     # must_parent_indexに子のindexが再代入→転倒。子の値を親の位置に引き上げ、もう一段下で再比較
-    must_parent_index, must_parent_value = must_parent_index_and_value_of(first_value, tmp_parent_index)
-    until must_parent_index == tmp_parent_index
+
+    until (tmp_strongest_index = strongest_index(first_value, tmp_parent_index)) == tmp_parent_index
       # 子の値を親の位置に引き上げ、もう一段下で再比較
-      self[tmp_parent_index] = must_parent_value
-      tmp_parent_index = must_parent_index
-      must_parent_index, must_parent_value = must_parent_index_and_value_of(first_value, tmp_parent_index)
+      self[tmp_parent_index] = self[tmp_strongest_index]
+      tmp_parent_index = tmp_strongest_index
     end
     # 終了したら頂上の値を今の親のindexに代入
     self[tmp_parent_index] = first_value
   end
 
-  def must_parent_index_and_value_of(parent_value, parent_index)
-    # indexから実際の値を取ってこないこと。実際に値を交換せずに擬似的に親valueを下ろしてきているだけなのでズレる
-    left_child_index = (parent_index << 1) + 1
-    return parent_index unless (left_value = self[left_child_index])
+  def strongest_index(new_first_value, tmp_parent_index)
+    return tmp_parent_index if (left_child_index = (tmp_parent_index << 1) + 1) >= size
 
-    right_child_index = left_child_index + 1
-    right_value = self[right_child_index]
-    # 子の値はズレていないので直接取って良し。左と右どちらが親に近いか決める
-    if not_need_swap(left_value, right_value, right_child_index)
-      stronger_child_index = left_child_index
-      child_value = left_value
-    else
+    stronger_child_index = left_child_index
+    if (right_child_index = left_child_index + 1) < size &&
+       @correct_order_proc.call(self[right_child_index], self[stronger_child_index])
       stronger_child_index = right_child_index
-      child_value = right_value
     end
-    # 勝ち残った方の子を親と比べる
-    if not_need_swap(parent_value, child_value, stronger_child_index)
-      [parent_index, parent_value]
-    else
-      [stronger_child_index, child_value]
-    end
-  end
-
-  def not_need_swap(parent_value, child_value, child_index)
-    raise StandardError, 'no proc' unless @proc
-
-    child_index == 0 || !child_value || parent_value == child_value || @correct_order_proc.call(parent_value,
-                                                                                                child_value)
+    @correct_order_proc.call(new_first_value, self[stronger_child_index]) ? tmp_parent_index : stronger_child_index
   end
 end

@@ -85,12 +85,10 @@ module MyInversionNumber
 
     # 座標圧縮
     extend CoordinateCompression
-    self_uniq_hash = coordinate_compression
-    raw_array = map { |v| self_uniq_hash[v] }
+    raw_array = coordinate_compression
+    # raw_array = self
 
-    fenwick = Array.new(raw_array.max + 1, 0)
-    fenwick[0] = raw_array.max
-    fenwick.extend MyFenwickTree
+    fenwick = fenwick_initialize(raw_array.max)
     answer = 0
     raw_array.each_with_index do |value, index|
       # 現状の右合計 = 現状の全数-現状の左合計
@@ -100,10 +98,19 @@ module MyInversionNumber
     answer
   end
 
+  def fenwick_initialize(arg_array_max)
+    fenwick = Array.new(arg_array_max + 1, 0)
+    fenwick[0] = arg_array_max
+    fenwick.extend MyFenwickTree
+  end
+
+  # 座標圧縮
   module CoordinateCompression
     def coordinate_compression
       self_uniq = uniq
-      self_uniq.sort.zip((1..self_uniq.size).to_a).to_h
+      self_uniq_hash = self_uniq.sort.zip((1..self_uniq.size).to_a).to_h
+
+      map { |v| self_uniq_hash[v] }
       # [self_uniq.sort, (1..self_uniq.size).to_a].transpose.to_h
     end
   end
