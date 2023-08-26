@@ -17,3 +17,4 @@ end
 
 fact = []
 fact.extend Factorial
+fact.my_init
