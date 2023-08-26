@@ -1,0 +1,20 @@
+require 'set'
+
+N = gets.to_i
+child_lists = [nil]
+N.times do
+  input = gets.split.map(&:to_i)
+  input.shift
+  child_lists << input
+end
+
+visited = Set.new
+recursive_dfs = lambda do |tmp_node|
+  return [] if visited.member? tmp_node
+
+  all_children = child_lists[tmp_node].map do |child_node|
+    recursive_dfs.call(child_node)
+  end
+  visited << tmp_node
+  all_children.push tmp_node
+end
