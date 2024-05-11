@@ -1,93 +1,59 @@
 # [-1, 0]をノード数分並べた二次元配列にincludeする
 module WeightedUnionFind
-  @weight_proc = proc { |weight_of_y, weight_of_x| weight_of_y - weight_of_x }
-  @back_calc_proc = proc { |weight| - weight }
-
-  def write_proc!(&arg_block)
-    @weight_proc = arg_block
-    @weight_proc.freeze
+  # from_weightとrelative_weightからto_weightを出す
+  def write_weight_of_to_proc!(&arg_block)
+    @weight_of_to_proc = arg_block
+    @weight_of_to_proc.freeze
   end
 
-  def write_back_calc_proc!(&arg_block)
-    @back_calc_proc = arg_block
-    @back_calc_proc.freeze
+  # (root_of_from, weight_of_from, weight_of_to, arg_relative_weight)から新しい[weight_of_to]
+  def write_child_root_proc!(&arg_block)
+    @child_root_proc = arg_block
+    @child_root_proc.freeze
   end
 
-  # xとyを「xとyの距離がw」として同じグループに統合する。
-  def unite(node_x, node_y, weight)
-    root_of_x, weight_of_x = root_and_weight!(node_x)
-    root_of_y, weight_of_y = root_and_weight!(node_y)
+  # fromとtoを「fromから見たtoの相対的重さ」として同じグループに統合する。
+  def unite!(node_from, node_to, arg_relative_weight)
+    root_of_from, weight_of_from = root_and_weight!(node_from)
+    root_of_to, weight_of_to = root_and_weight!(node_to)
 
-    # return weight_of_x && weight_of_y && weight == @weight_proc.call(weight_of_x, weight_of_y) if root_of_x == root_of_y
-    return weight == @weight_proc.call(weight_of_x, weight_of_y) if root_of_x == root_of_y
+    return weight_of_to == @weight_of_to_proc.call(weight_of_from, arg_relative_weight) if root_of_from == root_of_to
 
-    # ツリーサイズ判定は無し
-    self[root_of_x][0] -= tree_size(root_of_y)
-    self[root_of_x][1] = nil unless weight_of_y
-    self[root_of_y] = unite_y!(root_of_x, weight_of_x, weight_of_y, weight)
+    # ツリーサイズ小さい方を子にするような判定は無し。fromが親でtoが子
+    self[root_of_from][0] -= tree_size(root_of_to)
+    self[root_of_to] = [root_of_from, @child_root_proc.call(weight_of_from, weight_of_to, arg_relative_weight)]
     true
-  end
-
-  def unite_y!(root_of_x, weight_of_x, weight_of_y, new_distance)
-    [root_of_x, new_distance - @weight_proc.call(weight_of_y, weight_of_x)]
-    # [root_of_x, weight_of_x && weight_of_y && weight_of_x - weight_of_y + new_distance]
   end
 
   def same_union?(node_a, node_b)
     root_and_weight!(node_a)[0] == root_and_weight!(node_b)[0]
   end
 
-  # xとyが同じグループにいるとき、weight(y) - weight(x) を返す。
-  def diff(node_x, node_y)
-    return nil unless same_union?(node_x, node_y)
-
-    @weight_proc.call(self[node_y][1], self[node_x][1])
-    # root_of_x = root_and_weight!(node_x)[0]
-    # self[root_of_x][1] ? self[node_y][1] - self[node_x][1] : Float::INFINITY
-  end
-
   def tree_size(node)
     self[root_and_weight!(node)[0]][0] * -1
   end
 
-  def root_and_weight!(now_node)
-    stack = stack_to_root_from(now_node)
+  def root_and_weight!(arg_index)
+    return [arg_index, self[arg_index][1]] if root?(arg_index)
 
-    root_index = stack.pop
-    weight_of_parent = self[root_index][1]
-    stack.reverse.each do |child_index|
-      self[child_index][0] = root_index
-      weight_of_parent = (self[child_index][1] =
-                            @weight_proc.call(self[child_index][1], @back_calc_proc.call(weight_of_parent)))
-    end
-    [root_index, weight_of_parent]
-  end
+    parent_index, weight_from_parent = self[arg_index]
+    return [parent_index, self[arg_index][1]] if root?(parent_index)
 
-  def stack_to_root_from(now_node)
-    answer = [now_node]
-    answer << self[answer[-1]][0] until root?(answer[-1])
-    answer
+    # ミュータブルオブジェクトなのでシャローコピーにならないよう注意
+    answer =  root_and_weight!(parent_index).dup
+    answer[1] += weight_from_parent
+    self[arg_index] = answer
   end
 
   def root?(now_node)
     self[now_node][0] < 0
   end
-
-  private :unite_y!
-  private :stack_to_root_from
 end
 
 NODES_COUNT, EDGES_COUNT = gets.split.map(&:to_i) # 配列から多重代入
 wuf = Array.new(NODES_COUNT) { [-1, 0] }
 wuf.extend WeightedUnionFind
-wuf.write_proc! { |weight_of_y, weight_of_x| weight_of_y[0] ^ weight_of_x[0] }
-wuf.write_back_calc! { |weight| weight }
-EDGES_COUNT.times do
-  a, b = gets.split.map(&:to_i)
-  a -= 1
-  b -= 1
-  unless wuf.unite(a, b, 1)
-    puts 0
-    exit
-  end
+wuf.write_weight_of_to_proc! { |weight_of_parent, relative_weight| weight_of_parent + relative_weight }
+wuf.write_child_root_proc! do |weight_of_from, weight_of_to, arg_relative_weight|
+  weight_of_from + arg_relative_weight - weight_of_to
 end

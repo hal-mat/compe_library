@@ -3,22 +3,42 @@ require 'prime'
 # 全約数列挙
 # ref:https://qiita.com/HMMNRST/items/756460a3ebf13b96278e
 class Prime
-  def each_divisor(n, &block)
-    pf = prime_division(n)
+  def each_divisor(number, &block)
+    pf = prime_division(number)
     num = -> { pf.inject(1) { |prod, (_, exp)| prod * exp.succ } }
-    Enumerator.new(num) { |y| __each_divisor__(1, pf, &y.method(:<<)) }.tap { |enum| enum.each(&block) }
+    # Enumerator.new(num) { |y| __each_divisor__(1, pf, &y.method(:<<)) }.tap { |enum| enum.each(&block) }
+    Enumerator.new(num) { |y| __each_divisor__(1, pf) { |v| y << v } }.tap { |enum| enum.each(&block) }
   end
 
   private
 
-  def __each_divisor__(d, ary, &block)
-    return yield(d) if ary.empty?
+  def __each_divisor__(number, ary, &block)
+    return yield(number) if ary.empty?
 
     ary = ary.dup
     prime, exp = ary.pop
     0.upto(exp) do
-      __each_divisor__(d, ary, &block)
-      d *= prime
+      __each_divisor__(number, ary, &block)
+      number *= prime
     end
   end
 end
+
+prime = Prime.instance
+
+# 約数の個数
+prime.each_divisor(60).size
+#=> 12
+
+# 約数でループ（ソートはされない）
+prime.each_divisor(60) { |d| print d, ' ' }
+print "\n"
+#=> 1 2 4 3 6 12 5 10 20 15 30 60
+
+# Enumerableなメソッドを作用
+prime.each_divisor(60).select { |d| d * d <= 60 }
+#=> [1, 2, 4, 3, 6, 5]
+
+# 1でも正しく動作
+prime.each_divisor(1).to_a
+#=> [1]

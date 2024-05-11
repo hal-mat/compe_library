@@ -30,3 +30,31 @@ module Accumulate
     end
   end
 end
+
+class Array
+  include Accumulate
+end
+
+# 二次元累積和
+module TwoDimAccumulate
+  def two_dim_accum
+    tmp_answer = map(&:dup)
+    2.times do
+      tmp_answer.map! do |v|
+        v.accumulate { |a, b| a + b }
+      end
+      tmp_answer = tmp_answer.transpose
+    end
+    tmp_answer.extend TermSum
+  end
+
+  # 二次元累積和の差
+  module TermSum
+    def term_sum(top_out_row_index, left_out_column_index, bottom_in_row_index, right_in_column_index)
+      self[bottom_in_row_index][right_in_column_index] -
+        self [bottom_in_row_index][left_out_column_index] -
+        self[top_out_row_index][right_in_column_index] +
+        self[top_out_row_index][left_out_column_index]
+    end
+  end
+end

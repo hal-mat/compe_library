@@ -1,5 +1,29 @@
+ADJUST_LIST_LAMBDA = lambda do |min_nodes_count = 0, need_pred = true|
+  buffer_answer = Array.new(min_nodes_count)
+  EDGES.each do |node_a, node_b|
+    node_a -= 1 if need_pred
+    node_b -= 1 if need_pred
+    buffer_answer[node_a] ||= []
+    buffer_answer[node_a] << node_b
+    buffer_answer[node_b] ||= []
+    buffer_answer[node_b] << node_a
+  end
+  buffer_answer
+end
+
+SELF_AND_DESCENDANTS_COUNT_LAMBDA = lambda do |root|
+  answer = []
+  recursive = lambda do |tmp_node, parent_node = nil|
+    recursive_answer = 1 + ADJ_LIST[tmp_node].sum do |adjust_node|
+      (adjust_node == parent_node) ? 0 : recursive.call(adjust_node, tmp_node)
+    end
+    answer[tmp_node] = recursive_answer
+  end
+  recursive.call(root)
+  answer
+end
+
 # ref:https://atcoder.jp/contests/abc291/submissions/39282338
-# require 'set'
 module AdjustList
   def adjust_list(min_nodes_count = 0)
     buffer_answer = Array.new(min_nodes_count)
@@ -203,6 +227,17 @@ module AdjustList
             :add_depth_pyramid_row!, :refresh_instance_variable!, :climb_bit_length_not_common, :ancestor_where,
             :climb_bit_length_not_common
   end
+end
+
+CENTROIDS = lambda do
+  answer = []
+  ADJ_LIST.subtree_sizes.each_with_index do |subtree_size, i|
+    next if subtree_size > (NODES_COUNT >> 1) || subtree_size < (NODES_COUNT >> 1)
+
+    answer << i
+    break if answer.size == 2
+  end
+  answer
 end
 
 EDGES.extend AdjustList
