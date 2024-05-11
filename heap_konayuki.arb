@@ -1,0 +1,111 @@
+# ref:https://atcoder.jp/contests/abc306/submissions/42346841
+# ref:https://atcoder.jp/contests/abc325/submissions/46814688
+module MyHeap
+  # https://qiita.com/k-penguin-sato/items/7f98335ef631ea5ce7ad
+  # 使えるかわからんので注意
+
+  # classではなくmoduleなのでattr_writerは多分使えない
+  @heap_size = nil
+  def heap_size(heap_size = nil)
+    @heap_size ||= heap_size
+    @heap_size ||= size
+  end
+
+  @correct_order_proc = nil
+  def write_proc!(&arg_block)
+    @correct_order_proc = arg_block
+    @correct_order_proc.freeze
+  end
+
+  def heap_push!(arg_value)
+    tmp_child_index = @heap_size
+    @heap_size += 1
+    # マジで一回ずつswapするのではなく、既存のピラミッドを一段ずつ引き下げて出来た隙間に引数の要素をねじ込む
+    tmp_parent_index = (tmp_child_index - 1) >> 1
+    # while tmp_child_index > 0 && !correct_order?(self[tmp_parent_index], arg_value)
+    while tmp_child_index > 0 && !correct_order?(self[tmp_parent_index], arg_value)
+      self[tmp_child_index] = self[tmp_parent_index]
+      tmp_child_index = tmp_parent_index
+      tmp_parent_index = (tmp_child_index - 1) >> 1
+    end
+    # それ以上上がれない場合は末尾の値を現在のchildの位置にねじ込んで終了
+    self[tmp_child_index] = arg_value
+  end
+
+  # 昔はいちいち削除していたが、遅いので「heap維持しているのはここまで」の数値をいじって調整。
+  def heap_shift!
+    if @heap_size == 0
+      clear
+      return nil
+    end
+
+    shift_value = self[0]
+    @heap_size -= 1
+    heap_swap!(self[@heap_size])
+    shift_value
+  end
+
+  def heap_swap!(arg)
+    answer = self[0]
+    self[0] = arg
+    heap_down!
+    answer
+  end
+
+  private
+
+  # AtCoder Libraryのup,downと逆なので注意。下から持ち上げるのがup,頂上から下ろすのがdown
+  def heap_down!
+    first_value = self[0]
+    tmp_parent_index = 0
+    # must_parent_indexが親のindexのまま→正位置。終了
+    # must_parent_indexに子のindexが再代入→転倒。子の値を親の位置に引き上げ、もう一段下で再比較
+    tmp_strongest_index = strongest_index(first_value, tmp_parent_index)
+    until tmp_strongest_index == tmp_parent_index
+      # 子の値を親の位置に引き上げ、もう一段下で再比較
+      self[tmp_parent_index] = self[tmp_strongest_index]
+      tmp_parent_index = tmp_strongest_index
+
+      tmp_strongest_index = strongest_index(first_value, tmp_parent_index)
+    end
+    # 終了したら頂上の値を今の親のindexに代入
+    self[tmp_parent_index] = first_value
+  end
+
+  def strongest_index(first_value, tmp_parent_index)
+    left_child_index = (tmp_parent_index << 1) + 1
+    case left_child_index <=> @heap_size - 1
+    when 1
+      # 左が大きい、つまりright_child_indexが@heap_sizeを突破してしまっている
+      # ヒープ成立しているのは添字が@heap_size-1までなので、この場合はleft_child_indexすら範囲外
+      tmp_parent_index
+    when 0
+      # 左右が同じ。right_child_indexは範囲外だがleft_child_indexはギリギリ範囲内
+      correct_order?(first_value, self[left_child_index]) ? tmp_parent_index : left_child_index
+    when -1
+      # 完全に範囲内。左右の子と親の三種を比べる
+      triple_correct_order?(first_value, tmp_parent_index)
+    end
+  end
+
+  def triple_correct_order?(first_value, parent_index)
+    # 名前はtripleだが左右の子と親の３つを比べている意味。correct_order自体は２回しかコールしないので注意
+    left_child_index = (parent_index << 1) + 1
+    right_child_index = left_child_index + 1
+    stronger_child_index = if correct_order?(self[left_child_index], self[right_child_index])
+                             left_child_index
+                           else
+                             right_child_index
+                           end
+    correct_order?(first_value, self[stronger_child_index]) ? parent_index : stronger_child_index
+  end
+
+  def correct_order?(may_parent_value, may_child_value)
+    if @correct_order_proc
+      @correct_order_proc.call(may_parent_value, may_child_value)
+    else
+      # may_parent_value < may_child_value
+      may_parent_value[1] < may_child_value[1]
+    end
+  end
+end

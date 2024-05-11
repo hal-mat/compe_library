@@ -1,5 +1,3 @@
-require 'set'
-
 N = gets.to_i
 child_lists = [nil]
 N.times do

@@ -1,0 +1,53 @@
+# 配列用。繰り返し二乗法不使用。キャッシュ量は多い
+module PowerModCacheSimple
+  @mod = nil
+  def write_mod!(arg_mod)
+    raise StandardError, 'mod exists' if @mod
+
+    @mod = arg_mod
+    @mod.freeze
+  end
+
+  def power_mod(arg)
+    self[0] ||= 1
+    self << ((self[-1] << 1) % @mod) until self[arg]
+    self[arg]
+  end
+end
+power_mod_cache = []
+power_mod_cache.extend PowerModCache
+
+NINE_7_THREE = 998_244_353
+power_mod_cache.write_mod!(NINE_7_THREE)
+
+# 配列用。繰り返し二乗法あり。大数を一回算出するだけならこちらの方が早い
+module PowerModCache
+  @mod = nil
+  def write_mod!(arg_mod, common_ratio = 2)
+    raise StandardError, 'mod exists' if @mod
+
+    @mod = arg_mod
+    @mod.freeze
+    self[0] = common_ratio % @mod
+  end
+
+  def power(arg)
+    raise StandardError, 'no mod' unless @mod
+
+    i = 0
+    destroyable_arg = arg
+    answer = 1
+    until destroyable_arg == 0
+      answer = (answer * cache!(i)) % @mod if destroyable_arg[0] == 1
+      i += 1
+      destroyable_arg >>= 1
+    end
+    answer
+  end
+
+  def cache!(index)
+    self << self[-1].pow(2, @mod) until self[index]
+    self[index]
+  end
+  private :cache!
+end

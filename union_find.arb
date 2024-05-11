@@ -5,6 +5,7 @@ module UnionFind
   end
 
   def union_count
+    # これを使うよりunite!の回数を数えた方が早い
     count { |v| v < 0 }
   end
 
@@ -54,7 +55,6 @@ module UnionFind
   end
 end
 
-require 'set'
 # 短縮版
 # ref:https://twitter.com/0x3b800001/status/1591432107905409024
 class DSU < Hash

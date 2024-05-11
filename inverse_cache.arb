@@ -1,4 +1,4 @@
-# 配列用
+# hash用
 module InverseCache
   @mod = nil
   def write_mod!(arg_mod)
@@ -16,5 +16,15 @@ module InverseCache
     self[arg] ||= number.to_bn.mod_inverse(@mod).to_i
   end
 end
-inv_cache = []
+inv_cache = {}
 inv_cache.extend InverseCache
+
+NINE_7_THREE = 998_244_353
+inv_cache.write_mod!(NINE_7_THREE)
+
+NINE_7_THREE = 998_244_353
+MOD = NINE_7_THREE
+require 'openssl' # 剰余、逆元
+INV_CACHE = Hash.new do |hash, key|
+  hash[key] = key.to_bn.mod_inverse(MOD).to_i
+end

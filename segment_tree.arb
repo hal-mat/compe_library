@@ -1,99 +1,111 @@
-# 遅延セグ木ではなく通常セグ木。いつか遅延セグ木も書く
-module SegmentTree
+# 106行。moduleにしてarrayに差すとなぜか遅い。メソッド数の多いクラスほど重いのか?
+class SegmentTree
+  attr_reader :segment_tree, :raw_array
+
   # 根は[1]からスタート
-  def init_segment_tree!(element = nil, &arg_block)
+  def initialize(size, element)
+    @size = size
+    @size.freeze
     # 単位元。合計の初期値など
     @element = element
     @element.freeze
-    @parent_proc = arg_block
-    @parent_proc.freeze
-    @leaf_begin_index = 1 << size.bit_length
+    @raw_array = Array.new(@size, @element)
+    @leaf_begin_index = 1 << @size.bit_length
     @leaf_begin_index.freeze
-    @segment_tree = Array.new(@leaf_begin_index).concat(self)
-    update_all!
-  end
-
-  def []=(leaf_index, value)
-    raise StandardError, 'too large index' if leaf_index >= size
-
-    super(leaf_index, value)
-    child_index = @leaf_begin_index + leaf_index
-    @segment_tree[child_index] = value
-    until child_index == 1
-      parent_index = parent_index_of(child_index)
-      update!(parent_index)
-      child_index = parent_index
-    end
-  end
-
-  # op(a[l], ..., a[r - 1]) を返します。引数は半開区間です
-  def prod(l, r)
-    return false if l >= r
-
-    answer = @element
-    l += @leaf_begin_index
-    r += @leaf_begin_index
-    while l < r
-      # 引数が偶数の場合は計算しなくても上行けば合計が記録済み
-      # 引数が奇数の場合は上に行くと左の要素まで範囲に入ってしまうので、ここまでを記録してから一つ右側のペアに移動
-      if l[0] == 1
-        answer = @parent_proc.call(answer, @segment_tree[l])
-        l += 1
-      end
-      # 引数が偶数の場合はどちらも記録せずに上行ってOK
-      # 引数が奇数の場合はそのまま上に行くと左の要素が範囲から外れて消えてしまうので、左を記録してから上に移動
-      answer = @parent_proc.call(answer, @segment_tree[r - 1]) if r[0] == 1
-      l = parent_index_of(l)
-      r = parent_index_of(r)
-    end
-    answer
+    @segment_tree = Array.new(@leaf_begin_index | @size, @element)
   end
 
   def all_prod
     @segment_tree[1]
   end
 
+  # op(a[l], ..., a[r - 1]) を返します。引数は半開区間です
+  def prod(arg_l, arg_r)
+    return all_prod if arg_l == 0 && arg_r == @size
+    raise StandardError, 'not sorted' if arg_l > arg_r
+    return @raw_array[arg_l] if arg_l == arg_r
+
+    # prod_bottom_up(arg_l | @leaf_begin_index, arg_r | @leaf_begin_index)
+    prod_top_down(arg_l | @leaf_begin_index, (arg_r + 1) | @leaf_begin_index, @leaf_begin_index,
+                  (@leaf_begin_index << 1))
+  end
+
+  def []=(leaf_index, value)
+    raise StandardError, 'too large index' if leaf_index >= @size
+
+    @raw_array[leaf_index] = value
+    tmp_seg_index = @leaf_begin_index | leaf_index
+    @segment_tree[tmp_seg_index] = value
+    tmp_seg_index >>= 1
+    tmp_seg_index >>= 1 while tmp_seg_index >= 1 && update!(tmp_seg_index)
+  end
+
   # 二分探索のmax_rightとmin_leftもいつか書く
 
   private
 
-  # 全ての枝と根を更新
-  def update_all!
-    # 後ろから順に全てを足していく
-    # leafの最初のインデックスから最初に-1するので、branchの最後のインデックスから巻き戻る
-    parent_index_i = @leaf_begin_index
-    while (parent_index_i -= 1) >= 1
-      # p @segment_tree
-      update!(parent_index_i)
+  def update!(parent_index)
+    raise StandardError, 'too large parent index' if parent_index >= @leaf_begin_index
+
+    left_child_index = parent_index << 1
+    left_child_value = @segment_tree[left_child_index] || @element
+    right_child_value = @segment_tree[(left_child_index | 1)] || @element
+    new_parent_value = parent_value(left_child_value, right_child_value)
+    return false if @segment_tree[parent_index] == new_parent_value
+
+    @segment_tree[parent_index] = new_parent_value
+    true
+  end
+
+  # 再帰なのに、なぜか早い
+  def prod_top_down(seg_l, seg_r, tmp_seg_l, tmp_seg_r)
+    if seg_r <= tmp_seg_l || tmp_seg_r <= seg_l
+      @element
+    elsif seg_l <= tmp_seg_l && tmp_seg_r <= seg_r
+      # 先に@segment_tree[tmp_seg_l >> (tmp_seg_l ^ (tmp_seg_r - 1)).bit_length]を算出して
+      # elementと同じならそこでelementを返す仕組みも一度試した
+      # かえって遅くなるので削除
+      @segment_tree[tmp_seg_l >> (tmp_seg_l ^ (tmp_seg_r - 1)).bit_length]
+    else
+      # lとrの間。mid
+      tmp_seg_m = ((tmp_seg_l + tmp_seg_r) >> 1)
+      parent_value(prod_top_down(seg_l, seg_r, tmp_seg_l, tmp_seg_m),
+                   prod_top_down(seg_l, seg_r, tmp_seg_m, tmp_seg_r))
     end
   end
 
-  def update!(parent_index)
-    left_child_index, right_child_index = child_indexes_of(parent_index)
-    left_child_value = @segment_tree[left_child_index]
-    right_child_value = @segment_tree[right_child_index]
-    new_parent_value = if left_child_value && right_child_value
-                         @parent_proc.call(left_child_value, right_child_value)
-                       else
-                         left_child_value || right_child_value
-                       end
-    @segment_tree[parent_index] = new_parent_value
+  # aclはこちらなのだが、なぜか遅い。
+  def prod_bottom_up(seg_l, seg_r)
+    answer = @element
+    tmp_l = seg_l
+    tmp_r = seg_r
+    until tmp_l == tmp_r || answer == all_prod
+      # 引数が偶数の場合は計算しなくても上行けば合計が記録済み
+      # 引数が奇数の場合は上に行くと左隣の要素まで範囲に入ってしまうので、ここまでを記録してから一つ右側に移動して上に
+      answer = parent_value(answer, @segment_tree[tmp_l]) if tmp_l[0] == 1
+      # lが奇数の場合は一個右に詰めてから上に登る。偶数なら右に移動する必要はないが、どの道登る先は同じ
+      tmp_l  = (tmp_l + 1) >> 1
+      # 引数が偶数の場合はどちらも記録せずに上行ってOK
+      # 引数が奇数の場合はそのまま上に行くと現在右端の要素が範囲から外れて消えてしまうので、現在右端を記録してから上に移動
+      answer = parent_value(answer, @segment_tree[tmp_r ^ 1]) if tmp_r[0] == 1
+      tmp_r >>= 1
+    end
+    answer
   end
 
-  def parent_index_of(child_index)
-    child_index >> 1
-  end
-
-  def child_indexes_of(parent_index)
-    left_child_index = parent_index << 1
-    right_child_index = left_child_index | 1
-    [left_child_index, right_child_index]
+  def parent_value(_a_child_value, _b_child_value)
+    raise StandardError, 'no function'
   end
 end
 
-dp = Array.new(300_001, 0)
-dp.extend SegmentTree
-dp.init_segment_tree! { |a, b| (a > b) ? a : b }
+# monkey patch
+class SegmentTree
+  def parent_value(a_child_value, b_child_value) # rubocop:disable Lint/DuplicateMethods
+    (a_child_value > b_child_value) ? a_child_value : b_child_value
+  end
+end
+
+dp = SegmentTree.new(INPUT_MAX + 1, 0)
 
 # https://atcoder.jp/contests/abl/submissions/18547121
 
@@ -111,8 +123,8 @@ class SegmentTree
     @node[i] = val
     while i > 0
       i = (i - 1) / 2
-      l = @node[2 * i + 1]
-      r = @node[2 * i + 2]
+      l = @node[(2 * i) + 1]
+      r = @node[(2 * i) + 2]
       @node[i] = (l > r) ? l : r
     end
     p @node

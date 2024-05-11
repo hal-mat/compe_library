@@ -1,11 +1,17 @@
 # array用。indexとvalueが入れ替わる。
 module Indexes
-  def indexes
+  def indexes(is_uniq: false)
     buffer_answer = {}
     each_with_index do |v, i|
-      buffer_answer[v] ||= []
-      buffer_answer[v] << i
+      if is_uniq
+        buffer_answer[v] = i
+      else
+        buffer_answer[v] ||= []
+        buffer_answer[v] << i
+      end
     end
     buffer_answer
   end
 end
+
+# INPUT_INDEXES = INPUT.indexes(is_uniq: true)
